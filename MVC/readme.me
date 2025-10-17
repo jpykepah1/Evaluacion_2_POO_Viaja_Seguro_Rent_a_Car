@@ -1,0 +1,239 @@
+🚗 Sistema de Gestión de Arriendos - Viaja Seguro Rent a Car
+📋 Descripción del Proyecto
+Sistema completo de gestión para empresa de arriendo de vehículos desarrollado en Python con arquitectura MVC, conexión a base de datos MySQL y enfoque en seguridad informática.
+
+Contexto Académico: Proyecto para la asignatura "Programación Orientada a Objeto Seguro" (TI3021) que implementa los principios de POO, patrones de diseño y conexión segura a bases de datos.
+
+🏗️ Arquitectura del Sistema
+Patrón MVC Implementado
+text
+MVC/
+├── 📁 modelo/          # Entidades del negocio
+├── 📁 dao/             # Data Access Object (Persistencia)
+├── 📁 dto/             # Data Transfer Object (Transferencia)
+├── 📁 controlador/     # Lógica de negocio
+├── 📁 conex/           # Conexión a base de datos
+├── 📁 utils/           # Utilidades
+└── 🚀 main.py          # Punto de entrada
+Diagrama de Clases (Resumen)
+text
+Persona (Abstracta)
+├── User (Empleado)
+└── Cliente
+
+Vehiculo
+Arriendo
+
+Conex (Conexión BD)
+Encoder (Seguridad)
+📁 Estructura Detallada del Código
+1. Capa de Modelo (/modelo)
+persona.py - Clase Abstracta Base
+python
+class Persona(ABC):
+    """
+    Clase abstracta que representa una persona con datos básicos
+    Implementa encapsulamiento con atributos protegidos
+    """
+    def __init__(self, run="", nombre="", apellido=""):
+        self._run = run           # RUN único
+        self._nombre = nombre     # Nombre 
+        self._apellido = apellido # Apellido
+    
+    @abstractmethod
+    def mostrar_info(self): pass  # Método polimórfico
+user.py - Modelo de Empleado
+python
+class User(Persona):
+    """
+    Representa un empleado del sistema con credenciales de acceso
+    Hereda de Persona y añade funcionalidad de autenticación
+    """
+    def __init__(self, run="", nombre="", apellido="", password="", cargo=""):
+        super().__init__(run, nombre, apellido)
+        self._password = password  # Contraseña encriptada
+        self._cargo = cargo        # Rol: 'gerente' o 'empleado'
+cliente.py - Modelo de Cliente
+python
+class Cliente(Persona):
+    """
+    Representa un cliente de la empresa de arriendos
+    Hereda de Persona y añade datos de contacto
+    """
+    def __init__(self, run="", nombre="", apellido="", direccion="", telefono=""):
+        super().__init__(run, nombre, apellido)
+        self._direccion = direccion  # Dirección del cliente
+        self._telefono = telefono    # Teléfono de contacto
+vehiculo.py - Modelo de Vehículo
+python
+class Vehiculo:
+    """
+    Representa un vehículo disponible para arriendo
+    Gestiona estado y precios del vehículo
+    """
+    def __init__(self, patente="", marca="", modelo="", año=0, precio_diario=0.0):
+        self._patente = patente          # Patente única
+        self._marca = marca              # Marca del vehículo
+        self._modelo = modelo            # Modelo del vehículo
+        self._año = año                  # Año del vehículo
+        self._precio_diario = precio_diario  # Precio por día
+        self._estado = "disponible"      # Estado: disponible/arrendado/mantencion
+arriendo.py - Modelo de Arriendo
+python
+class Arriendo:
+    """
+    Representa un contrato de arriendo entre cliente, vehículo y empleado
+    Gestiona fechas, costos y estado del arriendo
+    """
+    def __init__(self, id_vehiculo, id_cliente, id_empleado, fecha_inicio, fecha_fin):
+        self._id_vehiculo = id_vehiculo    # ID vehículo arrendado
+        self._id_cliente = id_cliente      # ID cliente que arrienda
+        self._id_empleado = id_empleado    # ID empleado que gestiona
+        self._fecha_inicio = fecha_inicio  # Fecha inicio arriendo
+        self._fecha_fin = fecha_fin        # Fecha fin arriendo
+        self._costo_total = 0.0            # Calculado automáticamente
+        self._estado = "activo"            # Estado: activo/finalizado/cancelado
+2. Capa de Persistencia (/dao)
+dao_user.py - Acceso a Datos de Usuarios
+python
+class daoUser:
+    """
+    Data Access Object para la entidad User/Empleado
+    Maneja todas las operaciones CRUD con la base de datos
+    """
+    def validarLogin(self, user):
+        """Valida credenciales de usuario contra la base de datos"""
+        sql = "SELECT run, password, nombre, apellido, cargo FROM empleado WHERE run = %s"
+        # Ejecuta consulta y retorna resultados
+    
+    def agregarUsuario(self, user):
+        """Inserta nuevo usuario en la base de datos"""
+        sql = "INSERT INTO empleado (run, password, nombre, apellido, cargo) VALUES (%s, %s, %s, %s, %s)"
+    
+    # ... otros métodos CRUD
+dao_cliente.py, dao_vehiculo.py, dao_arriendo.py
+Patrón similar para cada entidad
+
+Operaciones específicas por entidad
+
+Manejo consistente de excepciones
+
+3. Capa de Transferencia (/dto)
+dto_user.py - Transferencia de Datos de Usuario
+python
+class UserDTO:
+    """
+    Data Transfer Object para la entidad User
+    Sirve como intermediario entre Controlador y DAO
+    Aplica lógica de negocio y seguridad
+    """
+    def validarLogin(self, username, clave):
+        """Valida login aplicando encriptación bcrypt"""
+        resultado = daouser.validarLogin(User(run=username))
+        if resultado and Encoder().verify(clave, password_hash_db):
+            return User(...)  # Retorna objeto User si credenciales son válidas
+4. Capa de Controlador (/controlador)
+validations.py - Lógica de Negocio Principal
+python
+def inicial(empleado_actual):
+    """
+    Menú principal del sistema después del login
+    Gestiona el flujo de la aplicación según el rol del usuario
+    """
+    while True:
+        mostrar_menu_principal()
+        opcion = input("Seleccione una opción: ")
+        
+        if opcion == '1': gestion_empleados()
+        elif opcion == '2': gestion_clientes()
+        # ... otras opciones
+
+def gestion_clientes():
+    """
+    Módulo completo de gestión de clientes
+    Implementa CRUD completo con interfaz de consola
+    """
+    while True:
+        mostrar_menu_clientes()
+        opcion = input("Seleccione una opción: ")
+        
+        if opcion == '1': agregar_cliente()
+        elif opcion == '2': buscar_cliente()
+        # ... otras operaciones
+5. Utilidades (/utils)
+encoder.py - Seguridad con Bcrypt
+python
+class Encoder:
+    """
+    Utilidad para encriptación y verificación de contraseñas
+    Usa el algoritmo bcrypt para seguridad robusta
+    """
+    def encode(self, password):
+        """Convierte contraseña en texto plano a hash seguro"""
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    def verify(self, password, hashed_password):
+        """Verifica si contraseña coincide con hash almacenado"""
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+6. Conexión a BD (/conex)
+conn.py - Gestión de Conexiones MySQL
+python
+class Conex:
+    """
+    Gestiona la conexión a la base de datos MySQL
+    Implementa patrón Singleton para conexión única
+    """
+    def __init__(self, host="localhost", user="root", passwd="", database="viaja_seguro"):
+        self.host = host
+        self.user = user
+        self.passwd = passwd
+        self.database = database
+        self.__myconn = None
+        self.connect()  # Conexión automática al instanciar
+    
+    def connect(self):
+        """Establece conexión con la base de datos"""
+        try:
+            self.__myconn = pymysql.connect(...)
+            print("✅ Conexión establecida")
+        except Exception as ex:
+            print(f"❌ Error de conexión: {ex}")
+7. Punto de Entrada
+main.py - Aplicación Principal
+python
+def main():
+    """
+    Función principal que inicia la aplicación
+    Gestiona el flujo de login y menú de acceso
+    """
+    while True:
+        print("=== SISTEMA DE GESTIÓN DE ARRIENDOS ===")
+        menuAccesoUsuarios()
+        opcion = input("Ingrese opción: ")
+        
+        if opcion == '1': 
+            # Proceso de login con validación
+            username = input("Ingrese RUN de empleado: ")
+            password = getpass.getpass("Ingrese contraseña: ")
+            empleado = validarLogin(username, password)
+            
+            if empleado:
+                inicial(empleado)  # Pasar al menú principal
+🔐 Sistema de Seguridad
+Autenticación
+Login seguro con RUN y contraseña
+
+Límite de intentos (3 intentos máximos)
+
+Contraseñas encriptadas con bcrypt
+
+Bloqueo automático tras múltiples fallos
+
+Autorización
+Roles diferenciados: Gerente vs Empleado
+
+Permisos granulares: Gerente tiene acceso completo
+
+Validación de sesiones: Usuario debe estar autenticado
+
+Encriptación
