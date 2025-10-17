@@ -641,8 +641,6 @@ Estos archivos son esenciales para mantener la salud del proyecto y facilitar el
 
 ---
 
----
-
 ## 👨‍💻 Autor
 
 **Viaja Seguro Rent a Car - Sistema de Gestión**  
