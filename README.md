@@ -227,6 +227,419 @@ viaja_seguro
 ├── vehiculo
 └── arriendo
 ```
+# 🔧 Archivos de Diagnóstico y Utilidad
+
+## 📁 Archivos de Soporte Técnico
+
+El proyecto incluye varios archivos de diagnóstico y utilidad que fueron creados durante el desarrollo para resolver problemas específicos y verificar el funcionamiento del sistema.
+
+## 1. `diagnostico_final.py` - Verificador Completo del Sistema
+
+### **Propósito**
+Archivo de diagnóstico integral que verifica todos los componentes críticos del sistema antes de ponerlo en producción.
+
+### **Funcionalidades Implementadas**
+
+```python
+def test_simple():
+    """
+    Prueba básica de conexión a la base de datos
+    Verifica que:
+    - La conexión se establece correctamente
+    - Las consultas SQL funcionan
+    - Los datos pueden ser recuperados
+    """
+    try:
+        conex = Conex()
+        conn = conex.getConex()
+        cursor = conn.cursor()
+        
+        # Consulta simple para verificar conexión
+        cursor.execute("SELECT run, password FROM empleado WHERE run = '12345678-9'")
+        result = cursor.fetchone()
+        
+        print("✅ Consulta exitosa")
+        print(f"RUN: {result[0]}")
+        print(f"Password hash: {result[1][:30]}...")
+        
+        cursor.close()
+        return True
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+```
+
+```python
+def test_login_simple():
+    """
+    Prueba específica del sistema de login
+    Verifica que:
+    - El DAO de usuarios funciona correctamente
+    - La validación de credenciales opera como se espera
+    - El objeto User se crea correctamente
+    """
+    try:
+        from dao.dao_user import daoUser
+        from modelo.user import User
+        
+        dao = daoUser()
+        user = User(run='12345678-9')
+        result = dao.validarLogin(user)
+        
+        if result:
+            print("✅ validarLogin exitoso")
+            print(f"Datos retornados: {len(result)} elementos")
+            return True
+        else:
+            print("❌ validarLogin retornó None")
+            return False
+    except Exception as e:
+        print(f"❌ Error en test_login_simple: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+```
+
+### **Uso Práctico**
+```bash
+# Ejecutar diagnóstico completo
+python diagnostico_final.py
+
+# Salida esperada:
+🔍 DIAGNÓSTICO FINAL
+========================================
+✅ Consulta exitosa
+RUN: 12345678-9
+Password hash: $2b$12$KcCwvJQ4qQ4q4q4q4q4q4u...
+✅ validarLogin exitoso
+Datos retornados: 6 elementos
+========================================
+🎉 Diagnóstico exitoso - El sistema debería funcionar
+```
+
+### **Casos de Uso**
+- ✅ **Despliegue inicial**: Verificar que todo funciona antes del primer uso
+- ✅ **Solución de problemas**: Diagnosticar errores específicos
+- ✅ **Después de cambios**: Validar que modificaciones no rompan funcionalidades
+- ✅ **Documentación técnica**: Mostrar el estado actual del sistema
+
+---
+
+## 2. `generar_password.py` - Generador de Contraseñas Seguras
+
+### **Propósito**
+Herramienta para generar y verificar contraseñas encriptadas con bcrypt, esencial para la configuración inicial de usuarios.
+
+### **Funcionalidades Principales**
+
+```python
+def generar_password(password_texto):
+    """
+    Genera un hash bcrypt seguro a partir de una contraseña en texto plano
+    Usa 12 rounds de encriptación para equilibrio entre seguridad y rendimiento
+    
+    Args:
+        password_texto (str): Contraseña en texto plano a encriptar
+    
+    Returns:
+        str: Hash bcrypt de la contraseña
+    """
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password_texto.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+```
+
+```python
+def verificar_password(password_texto, password_hash):
+    """
+    Verifica si una contraseña en texto plano coincide con un hash bcrypt
+    
+    Args:
+        password_texto (str): Contraseña a verificar
+        password_hash (str): Hash almacenado para comparar
+    
+    Returns:
+        bool: True si la contraseña coincide, False en caso contrario
+    """
+    return bcrypt.checkpw(password_texto.encode('utf-8'), password_hash.encode('utf-8'))
+```
+
+### **Ejemplo de Uso**
+```bash
+# Ejecutar generador de contraseñas
+python generar_password.py
+
+# Salida esperada:
+==================================================
+GENERADOR DE CONTRASEÑAS
+==================================================
+Contraseña en texto: admin123
+Hash generado: $2b$12$KcCwvJQ4qQ4q4q4q4q4q4uQ4q4q4q4q4q4q4q4q4q4q4q4q4q4q
+Longitud del hash: 60
+Verificación: True
+
+📋 Para usar en SQL:
+INSERT INTO empleado (run, password, nombre, apellido, cargo) VALUES 
+('12345678-9', '$2b$12$KcCwvJQ4qQ4q4q4q4q4q4uQ4q4q4q4q4q4q4q4q4q4q4q4q4q4q', 'Admin', 'Sistema', 'gerente');
+```
+
+### **Características de Seguridad**
+- **Salt automático**: Cada hash es único incluso para contraseñas idénticas
+- **12 rounds**: Balance óptimo entre seguridad y rendimiento
+- **Resistente a ataques**: Protección contra fuerza bruta y rainbow tables
+- **Verificación segura**: Comparación timing-attack resistant
+
+### **Casos de Uso**
+- 🔐 **Configuración inicial**: Generar hashes para usuarios predeterminados
+- 🔄 **Reset de contraseñas**: Crear nuevas contraseñas encriptadas
+- 🧪 **Testing**: Verificar que el sistema de encriptación funciona
+- 📚 **Educación**: Demostrar cómo funciona bcrypt
+
+---
+
+## 3. `test_diagnostico.py` - Suite Completa de Pruebas
+
+### **Propósito**
+Sistema de diagnóstico comprehensivo que prueba cada capa de la aplicación de forma independiente y combinada.
+
+### **Módulos de Prueba**
+
+```python
+def test_conexion():
+    """
+    Prueba la conexión a la base de datos
+    Verifica:
+    - Instanciación de la clase Conex
+    - Establecimiento de conexión MySQL
+    - Disponibilidad de la base de datos
+    """
+    try:
+        from conex.conn import Conex
+        conex = Conex()
+        if conex.getConex():
+            print("✅ Conexión a BD: OK")
+            return True
+        else:
+            print("❌ Conexión a BD: FALLÓ")
+            return False
+    except Exception as e:
+        print(f"❌ Error en conexión: {e}")
+        return False
+```
+
+```python
+def test_tablas():
+    """
+    Verifica la estructura de la base de datos
+    Comprueba:
+    - Existencia de tablas necesarias
+    - Integridad de los datos de prueba
+    - Formato correcto de contraseñas encriptadas
+    """
+    try:
+        from conex.conn import Conex
+        conex = Conex()
+        conn = conex.getConex()
+        cursor = conn.cursor()
+        
+        # Verificar tabla empleado
+        cursor.execute("SELECT COUNT(*) as count FROM empleado")
+        resultado = cursor.fetchone()
+        print(f"✅ Tabla empleado: {resultado['count']} registros")
+        
+        # Verificar datos de empleado
+        cursor.execute("SELECT run, nombre, apellido, cargo, LENGTH(password) as pass_len FROM empleado")
+        empleados = cursor.fetchall()
+        for emp in empleados:
+            print(f"   👤 {emp['run']}: {emp['nombre']} {emp['apellido']} - {emp['cargo']} (pass: {emp['pass_len']} chars)")
+        
+        cursor.close()
+        return True
+    except Exception as e:
+        print(f"❌ Error en tablas: {e}")
+        return False
+```
+
+```python
+def test_login():
+    """
+    Prueba integral del sistema de autenticación
+    Valida:
+    - Proceso completo de login
+    - Verificación de credenciales
+    - Creación de objetos User
+    - Mensajes de error apropiados
+    """
+    try:
+        from dto.dto_user import UserDTO
+        dto = UserDTO()
+        
+        print("\n🔐 Probando login...")
+        resultado = dto.validarLogin('12345678-9', 'admin123')
+        
+        if resultado:
+            print(f"✅ Login exitoso!")
+            print(f"   Usuario: {resultado.getNombre()} {resultado.getApellido()}")
+            print(f"   Cargo: {resultado.getCargo()}")
+            return True
+        else:
+            print("❌ Login fallido")
+            return False
+    except Exception as e:
+        print(f"❌ Error en login: {e}")
+        return False
+```
+
+### **Ejecución Completa**
+```bash
+python test_diagnostico.py
+
+# Salida de ejemplo:
+🔍 INICIANDO DIAGNÓSTICO COMPLETO
+==================================================
+✅ Conexión a MySQL establecida correctamente
+✅ Base de datos: viaja_seguro
+✅ Conexión a BD: OK
+✅ Conexión a MySQL establecida correctamente
+✅ Base de datos: viaja_seguro
+✅ Tabla empleado: 2 registros
+   👤 12345678-9: Admin Sistema - gerente (pass: 60 chars)
+   👤 98765432-1: Juan Pérez - empleado (pass: 60 chars)
+
+🔐 Probando login...
+🔍 Intentando login para RUN: 12345678-9
+✅ Conexión a MySQL establecida correctamente
+✅ Usuario encontrado: Admin Sistema
+🔍 Hash encontrado en BD: $2b$12$KcCwvJQ4qQ4q4q4q4...
+🔍 Verificando contraseña...
+✅ Contraseña correcta para Admin Sistema
+✅ Login exitoso!
+   Usuario: Admin Sistema
+   Cargo: gerente
+==================================================
+🎉 TODAS LAS PRUEBAS PASARON! El sistema está listo.
+```
+
+### **Ventajas del Diagnóstico**
+- **Pruebas modulares**: Cada componente se prueba individualmente
+- **Información detallada**: Mensajes claros sobre lo que se está probando
+- **Tolerancia a fallos**: Continúa ejecutándose incluso si una prueba falla
+- **Debugging fácil**: Identifica exactamente dónde están los problemas
+
+---
+
+## 4. `test_imports.py` - Validador de Dependencias
+
+### **Propósito**
+Verifica que todas las importaciones entre módulos funcionen correctamente, detectando problemas de estructura de paquetes y dependencias circulares.
+
+### **Código Principal**
+
+```python
+import sys
+import os
+
+# Agregar el directorio actual al path para importaciones relativas
+sys.path.append(os.path.dirname(__file__))
+
+try:
+    from modelo.user import User
+    print("✅ User importado correctamente")
+    
+    from dao.dao_user import daoUser
+    print("✅ daoUser importado correctamente")
+    
+    from dto.dto_user import UserDTO
+    print("✅ UserDTO importado correctamente")
+    
+    from conex.conn import Conex
+    print("✅ Conex importado correctamente")
+    
+    print("🎉 Todas las importaciones funcionan!")
+    
+except ImportError as e:
+    print(f"❌ Error de importación: {e}")
+except Exception as e:
+    print(f"❌ Otro error: {e}")
+```
+
+### **Qué Verifica**
+- ✅ **Estructura de paquetes**: Que los `__init__.py` estén presentes
+- ✅ **Importaciones relativas**: Que los módulos se puedan importar entre sí
+- ✅ **Dependencias circulares**: Que no haya importaciones circulares
+- ✅ **Nombres de clases**: Que los nombres coincidan exactamente
+- ✅ **Jerarquía de archivos**: Que la estructura de directorios sea correcta
+
+### **Ejecución y Salida**
+```bash
+python test_imports.py
+
+# Salida exitosa:
+✅ User importado correctamente
+✅ daoUser importado correctamente
+✅ UserDTO importado correctamente
+✅ Conex importado correctamente
+🎉 Todas las importaciones funcionan!
+
+# Salida con error:
+❌ Error de importación: cannot import name 'User' from 'modelo.user'
+```
+
+### **Problemas Comunes que Detecta**
+
+1. **Archivos faltantes**:
+   ```
+   ❌ Error de importación: No module named 'modelo.user'
+   ```
+
+2. **Clases mal nombradas**:
+   ```
+   ❌ Error de importación: cannot import name 'User' from 'modelo.user'
+   ```
+
+3. **Problemas de path**:
+   ```
+   ❌ Error de importación: attempted relative import with no known parent package
+   ```
+
+4. **Dependencias circulares**:
+   ```
+   ❌ Error de importación: cannot import name 'X' from partially initialized module 'Y'
+   ```
+
+---
+
+## 🛠️ Flujo de Trabajo Recomendado
+
+### Para Nuevos Desarrolladores
+1. **Ejecutar `test_imports.py`** - Verificar que el entorno está configurado correctamente
+2. **Ejecutar `test_diagnostico.py`** - Validar que todos los componentes funcionan
+3. **Usar `generar_password.py`** si es necesario crear nuevos usuarios
+4. **Ejecutar `diagnostico_final.py`** antes de cualquier despliegue
+
+### Para Solución de Problemas
+1. **Ejecutar `test_imports.py`** - Identificar problemas de estructura
+2. **Revisar errores específicos** con los mensajes detallados
+3. **Usar `generar_password.py`** para regenerar contraseñas si es necesario
+4. **Ejecutar `test_diagnostico.py`** para diagnóstico completo
+
+### Para Mantenimiento
+1. **Ejecutar diagnósticos regularmente** después de actualizaciones
+2. **Usar `generar_password.py`** para rotar contraseñas
+3. **Mantener los scripts actualizados** con nuevos módulos
+
+## 📊 Resumen de Archivos de Utilidad
+
+| Archivo | Propósito | Cuándo Usarlo |
+|---------|-----------|---------------|
+| `test_imports.py` | Verificar importaciones | Al clonar el proyecto o agregar nuevos módulos |
+| `test_diagnostico.py` | Pruebas completas del sistema | Después de cambios importantes o para debug |
+| `diagnostico_final.py` | Verificación pre-producción | Antes de desplegar a producción |
+| `generar_password.py` | Generación de contraseñas | Al crear nuevos usuarios o resetear contraseñas |
+
+Estos archivos son esenciales para mantener la salud del proyecto y facilitar el desarrollo colaborativo. Proporcionan verificación automática de que el sistema funciona correctamente y herramientas para resolver problemas comunes.
+
+---
 
 ---
 
