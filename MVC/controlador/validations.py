@@ -143,7 +143,9 @@ def gestion_empleados():
 
 def gestion_clientes():
     """Gestión completa de clientes"""
+    from dto.dto_cliente import ClienteDTO
     clientedto = ClienteDTO()
+    
     while True:
         print("""
 === GESTIÓN DE CLIENTES ===
@@ -155,34 +157,33 @@ def gestion_clientes():
 6. Volver al Menú Principal
 """)
         opcion = input("Seleccione una opción: ")
-
+        
         if opcion == '1':
             print("\n--- AGREGAR CLIENTE ---")
             run = input("RUN: ")
             nombre = input("Nombre: ")
             apellido = input("Apellido: ")
-            telefono = input("Teléfono: ")
             direccion = input("Dirección: ")
-
-            if clientedto.agregarCliente(run, nombre, apellido, telefono, direccion):
+            telefono = input("Teléfono: ")
+            
+            if clientedto.agregarCliente(run, nombre, apellido, direccion, telefono):
                 print("✅ Cliente agregado correctamente")
             else:
                 print("❌ Error al agregar cliente")
-
+                
         elif opcion == '2':
             print("\n--- BUSCAR CLIENTE ---")
             run = input("RUN del cliente: ")
             cliente = clientedto.buscarCliente(run)
             if cliente:
                 print(f"✅ Cliente encontrado:")
-                print(f"   ID: {cliente.getIdCliente()}")
                 print(f"   RUN: {cliente.getRun()}")
                 print(f"   Nombre: {cliente.getNombre()} {cliente.getApellido()}")
-                print(f"   Teléfono: {cliente.getTelefono()}")
                 print(f"   Dirección: {cliente.getDireccion()}")
+                print(f"   Teléfono: {cliente.getTelefono()}")
             else:
                 print("❌ Cliente no encontrado")
-
+                
         elif opcion == '3':
             print("\n--- ACTUALIZAR CLIENTE ---")
             run = input("RUN del cliente a actualizar: ")
@@ -191,39 +192,44 @@ def gestion_clientes():
                 print(f"Cliente actual: {cliente_existente.getNombre()} {cliente_existente.getApellido()}")
                 nombre = input(f"Nuevo nombre [{cliente_existente.getNombre()}]: ") or cliente_existente.getNombre()
                 apellido = input(f"Nuevo apellido [{cliente_existente.getApellido()}]: ") or cliente_existente.getApellido()
-                telefono = input(f"Nuevo teléfono [{cliente_existente.getTelefono()}]: ") or cliente_existente.getTelefono()
                 direccion = input(f"Nueva dirección [{cliente_existente.getDireccion()}]: ") or cliente_existente.getDireccion()
-
-                if clientedto.actualizarCliente(cliente_existente.getIdCliente(), cliente_existente.getRun(), nombre, apellido, telefono, direccion):
+                telefono = input(f"Nuevo teléfono [{cliente_existente.getTelefono()}]: ") or cliente_existente.getTelefono()
+                
+                if clientedto.actualizarCliente(run, nombre, apellido, direccion, telefono):
                     print("✅ Cliente actualizado correctamente")
                 else:
                     print("❌ Error al actualizar cliente")
             else:
                 print("❌ Cliente no encontrado")
-
+                
         elif opcion == '4':
             print("\n--- ELIMINAR CLIENTE ---")
             run = input("RUN del cliente a eliminar: ")
+            
+            # Primero verificar que existe
             cliente = clientedto.buscarCliente(run)
             if cliente:
-                confirmacion = input(f"¿Está seguro de eliminar a {cliente.getNombre()} {cliente.getApellido()}? (s/n): ")
+                print(f"🔍 Cliente encontrado: {cliente.getNombre()} {cliente.getApellido()}")
+                confirmacion = input(f"¿Está seguro de eliminar a {cliente.getNombre()} {cliente.getApellido()}? (s/N): ")
                 if confirmacion.lower() == 's':
-                    if clientedto.eliminarCliente(cliente.getIdCliente()):
+                    if clientedto.eliminarCliente(run):
                         print("✅ Cliente eliminado correctamente")
                     else:
-                        print("❌ Error al eliminar cliente")
+                        print("❌ Error al eliminar cliente - Puede que tenga arriendos asociados")
+                else:
+                    print("❌ Eliminación cancelada")
             else:
                 print("❌ Cliente no encontrado")
-
+                
         elif opcion == '5':
             print("\n--- LISTA DE CLIENTES ---")
             clientes = clientedto.listarClientes()
             if clientes:
                 for i, cliente in enumerate(clientes, 1):
-                    print(f"{i}. {cliente.getNombre()} {cliente.getApellido()} - RUN: {cliente.getRun()} - ID: {cliente.getIdCliente()} - Tel: {cliente.getTelefono()}")
+                    print(f"{i}. {cliente.getNombre()} {cliente.getApellido()} - RUN: {cliente.getRun()} - Tel: {cliente.getTelefono()}")
             else:
                 print("📝 No hay clientes registrados")
-
+                
         elif opcion == '6':
             break
         else:
