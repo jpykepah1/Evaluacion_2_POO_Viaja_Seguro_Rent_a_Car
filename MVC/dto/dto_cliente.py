@@ -4,7 +4,7 @@ from modelo.cliente import Cliente
 class ClienteDTO:
     def agregarCliente(self, run, nombre, apellido, direccion, telefono):
         daocliente = DaoCliente()
-        return daocliente.agregarCliente(Cliente(run, nombre, apellido, direccion, telefono))
+        return daocliente.agregarCliente(Cliente(run=run, nombre=nombre, apellido=apellido, direccion=direccion, telefono=telefono))
 
     def buscarCliente(self, run):
         daocliente = DaoCliente()
@@ -12,7 +12,7 @@ class ClienteDTO:
 
     def actualizarCliente(self, run, nombre, apellido, direccion, telefono):
         daocliente = DaoCliente()
-        return daocliente.actualizarCliente(Cliente(run, nombre, apellido, direccion, telefono))
+        return daocliente.actualizarCliente(Cliente(run=run, nombre=nombre, apellido=apellido, direccion=direccion, telefono=telefono))
 
     def eliminarCliente(self, run):
         daocliente = DaoCliente()
