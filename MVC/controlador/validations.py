@@ -5,13 +5,21 @@ from dto.dto_arriendo import ArriendoDTO
 from modelo.empleado import Empleado
 import getpass
 from datetime import datetime, timedelta
+from validador_formatos import *
+import logging
+
+logger = logging.getLogger(__name__)
 
 def validarLogin(username, password):
+    logger.debug("Validando credenciales para usuario: %s", username)
     userdto = UserDTO()
     return userdto.validarLogin(username, password)
 
 def inicial(empleado_actual):
     """Menú principal después del login"""
+    logger.info("Sesión iniciada para: %s %s (%s)", 
+                empleado_actual.getNombre(), empleado_actual.getApellido(), empleado_actual.getCargo())
+    
     while True:
         print(f"""
 === MENÚ PRINCIPAL ===
@@ -28,25 +36,53 @@ Usuario: {empleado_actual.getNombre()} {empleado_actual.getApellido()} - Cargo: 
         
         if opcion == '1':
             if empleado_actual.getCargo() == 'gerente':
+                logger.info("Acceso a gestión de empleados por: %s", empleado_actual.getRun())
                 gestion_empleados()
             else:
+                logger.warning("Intento de acceso no autorizado a gestión de empleados por: %s", empleado_actual.getRun())
                 print("❌ Solo los gerentes pueden gestionar empleados")
         elif opcion == '2':
+            logger.info("Acceso a gestión de clientes por: %s", empleado_actual.getRun())
             gestion_clientes()
         elif opcion == '3':
+            logger.info("Acceso a gestión de vehículos por: %s", empleado_actual.getRun())
             gestion_vehiculos()
         elif opcion == '4':
+            logger.info("Acceso a gestión de arriendos por: %s", empleado_actual.getRun())
             gestion_arriendos(empleado_actual)
         elif opcion == '5':
+            logger.info("Acceso a generación de informes por: %s", empleado_actual.getRun())
             generar_informes()
         elif opcion == '6':
+            logger.info("Sesión cerrada por: %s", empleado_actual.getRun())
             print("👋 Sesión cerrada")
             break
         else:
+            logger.warning("Opción inválida seleccionada en menú principal: %s", opcion)
             print("❌ Opción no válida")
+
+def obtener_dato_validado(funcion_validacion, mensaje, mensaje_error, formato_esperado=""):
+    """Función auxiliar para obtener datos validados"""
+    while True:
+        dato = input(mensaje)
+        es_valido, mensaje_val = funcion_validacion(dato)
+        
+        if es_valido:
+            # Para RUN, devuelve el formato estandarizado
+            if funcion_validacion == validar_run:
+                logger.debug("Dato validado exitosamente: %s", mensaje_val)
+                return mensaje_val
+            logger.debug("Dato validado exitosamente: %s", dato)
+            return dato
+        else:
+            logger.debug("Validación fallida: %s - %s", dato, mensaje_val)
+            print(f"❌ {mensaje_val}")
+            if formato_esperado:
+                print(f"💡 Formato esperado: {formato_esperado}")
 
 def gestion_empleados():
     """Gestión de empleados (solo para gerentes)"""
+    logger.info("Iniciando gestión de empleados")
     userdto = UserDTO()
     while True:
         print("""
@@ -61,88 +97,183 @@ def gestion_empleados():
         opcion = input("Seleccione una opción: ")
         
         if opcion == '1':
+            logger.info("Iniciando proceso de agregar empleado")
             print("\n--- AGREGAR EMPLEADO ---")
-            run = input("RUN: ")
-            nombre = input("Nombre: ")
-            apellido = input("Apellido: ")
-            password = getpass.getpass("Contraseña: ")
-            cargo = input("Cargo (gerente/empleado): ").lower()
             
-            if cargo not in ['gerente', 'empleado']:
-                print("❌ Cargo no válido. Debe ser 'gerente' o 'empleado'")
-                continue
+            # Validar RUN
+            run = obtener_dato_validado(
+                validar_run, 
+                "RUN: ", 
+                "RUN inválido",
+                "12345678-9 o 12.345.678-9"
+            )
+            
+            # Validar nombre
+            nombre = obtener_dato_validado(
+                validar_nombre,
+                "Nombre: ",
+                "Nombre inválido",
+                "Solo letras (2-50 caracteres)"
+            )
+            
+            # Validar apellido
+            apellido = obtener_dato_validado(
+                validar_nombre,
+                "Apellido: ",
+                "Apellido inválido",
+                "Solo letras (2-50 caracteres)"
+            )
+            
+            # Validar contraseña
+            while True:
+                password = getpass.getpass("Contraseña: ")
+                es_valido, mensaje = validar_password(password)
+                if es_valido:
+                    break
+                logger.debug("Contraseña inválida: %s", mensaje)
+                print(f"❌ {mensaje}")
+            
+            # Validar cargo
+            cargo = obtener_dato_validado(
+                validar_cargo,
+                "Cargo (gerente/empleado): ",
+                "Cargo inválido",
+                "gerente o empleado"
+            ).lower()
                 
             if userdto.agregarUsuario(run, nombre, apellido, password, cargo):
+                logger.info("Empleado agregado exitosamente: %s %s (%s)", nombre, apellido, run)
                 print("✅ Empleado agregado correctamente")
             else:
+                logger.error("Error al agregar empleado: %s", run)
                 print("❌ Error al agregar empleado")
                 
         elif opcion == '2':
+            logger.info("Buscando empleado")
             print("\n--- BUSCAR EMPLEADO ---")
-            run = input("RUN del empleado: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del empleado: ",
+                "RUN inválido"
+            )
             empleado = userdto.buscarUsuario(run)
             if empleado:
+                logger.debug("Empleado encontrado: %s", run)
                 print(f"✅ Empleado encontrado:")
                 print(f"   RUN: {empleado.getRun()}")
                 print(f"   Nombre: {empleado.getNombre()} {empleado.getApellido()}")
                 print(f"   Cargo: {empleado.getCargo()}")
             else:
+                logger.debug("Empleado no encontrado: %s", run)
                 print("❌ Empleado no encontrado")
                 
         elif opcion == '3':
+            logger.info("Actualizando empleado")
             print("\n--- ACTUALIZAR EMPLEADO ---")
-            run = input("RUN del empleado a actualizar: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del empleado a actualizar: ",
+                "RUN inválido"
+            )
             empleado_existente = userdto.buscarUsuario(run)
             if empleado_existente:
+                logger.debug("Empleado encontrado para actualización: %s", run)
                 print(f"Empleado actual: {empleado_existente.getNombre()} {empleado_existente.getApellido()}")
-                nombre = input(f"Nuevo nombre [{empleado_existente.getNombre()}]: ") or empleado_existente.getNombre()
-                apellido = input(f"Nuevo apellido [{empleado_existente.getApellido()}]: ") or empleado_existente.getApellido()
-                password = getpass.getpass("Nueva contraseña (dejar en blanco para no cambiar): ")
-                cargo = input(f"Nuevo cargo [{empleado_existente.getCargo()}]: ") or empleado_existente.getCargo()
                 
-                if not password:  # Si no se cambia la contraseña, usar la existente
-                    password = empleado_existente.getPassword()
+                # Validar nombre
+                nombre = obtener_dato_validado(
+                    validar_nombre,
+                    f"Nuevo nombre [{empleado_existente.getNombre()}]: ",
+                    "Nombre inválido"
+                ) or empleado_existente.getNombre()
+                
+                # Validar apellido
+                apellido = obtener_dato_validado(
+                    validar_nombre,
+                    f"Nuevo apellido [{empleado_existente.getApellido()}]: ",
+                    "Apellido inválido"
+                ) or empleado_existente.getApellido()
+                
+                # Validar contraseña
+                password = getpass.getpass("Nueva contraseña (dejar en blanco para no cambiar): ")
+                if password:
+                    while True:
+                        es_valido, mensaje = validar_password(password)
+                        if es_valido:
+                            from utils.encoder import Encoder
+                            password = Encoder().encode(password)
+                            break
+                        logger.debug("Contraseña inválida durante actualización: %s", mensaje)
+                        print(f"❌ {mensaje}")
+                        password = getpass.getpass("Nueva contraseña (dejar en blanco para no cambiar): ")
+                        if not password:
+                            password = empleado_existente.getPassword()
+                            break
                 else:
-                    from utils.encoder import Encoder
-                    password = Encoder().encode(password)
+                    password = empleado_existente.getPassword()
+                
+                # Validar cargo
+                cargo = obtener_dato_validado(
+                    validar_cargo,
+                    f"Nuevo cargo [{empleado_existente.getCargo()}]: ",
+                    "Cargo inválido"
+                ) or empleado_existente.getCargo()
                 
                 if userdto.actualizarUsuario(run, nombre, apellido, password, cargo):
+                    logger.info("Empleado actualizado exitosamente: %s", run)
                     print("✅ Empleado actualizado correctamente")
                 else:
+                    logger.error("Error al actualizar empleado: %s", run)
                     print("❌ Error al actualizar empleado")
             else:
+                logger.debug("Empleado no encontrado para actualización: %s", run)
                 print("❌ Empleado no encontrado")
                 
         elif opcion == '4':
+            logger.info("Eliminando empleado")
             print("\n--- ELIMINAR EMPLEADO ---")
-            run = input("RUN del empleado a eliminar: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del empleado a eliminar: ",
+                "RUN inválido"
+            )
             empleado = userdto.buscarUsuario(run)
             if empleado:
+                logger.debug("Empleado encontrado para eliminación: %s", run)
                 confirmacion = input(f"¿Está seguro de eliminar a {empleado.getNombre()} {empleado.getApellido()}? (s/n): ")
                 if confirmacion.lower() == 's':
                     if userdto.eliminarUsuario(run):
+                        logger.info("Empleado eliminado exitosamente: %s", run)
                         print("✅ Empleado eliminado correctamente")
                     else:
+                        logger.error("Error al eliminar empleado: %s", run)
                         print("❌ Error al eliminar empleado")
             else:
+                logger.debug("Empleado no encontrado para eliminación: %s", run)
                 print("❌ Empleado no encontrado")
                 
         elif opcion == '5':
+            logger.info("Listando todos los empleados")
             print("\n--- LISTA DE EMPLEADOS ---")
             empleados = userdto.listarUsuarios()
             if empleados:
+                logger.debug("Listados %d empleados", len(empleados))
                 for i, empleado in enumerate(empleados, 1):
                     print(f"{i}. {empleado.getNombre()} {empleado.getApellido()} - RUN: {empleado.getRun()} - Cargo: {empleado.getCargo()}")
             else:
+                logger.debug("No hay empleados registrados")
                 print("📝 No hay empleados registrados")
                 
         elif opcion == '6':
+            logger.info("Saliendo de gestión de empleados")
             break
         else:
+            logger.warning("Opción inválida en gestión de empleados: %s", opcion)
             print("❌ Opción no válida")
 
 def gestion_clientes():
     """Gestión completa de clientes"""
+    logger.info("Iniciando gestión de clientes")
     from dto.dto_cliente import ClienteDTO
     clientedto = ClienteDTO()
     
@@ -159,84 +290,174 @@ def gestion_clientes():
         opcion = input("Seleccione una opción: ")
         
         if opcion == '1':
+            logger.info("Agregando nuevo cliente")
             print("\n--- AGREGAR CLIENTE ---")
-            run = input("RUN: ")
-            nombre = input("Nombre: ")
-            apellido = input("Apellido: ")
-            direccion = input("Dirección: ")
-            telefono = input("Teléfono: ")
+            
+            # Validar RUN
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN: ",
+                "RUN inválido"
+            )
+            
+            # Validar nombre
+            nombre = obtener_dato_validado(
+                validar_nombre,
+                "Nombre: ",
+                "Nombre inválido"
+            )
+            
+            # Validar apellido
+            apellido = obtener_dato_validado(
+                validar_nombre,
+                "Apellido: ",
+                "Apellido inválido"
+            )
+            
+            # Validar dirección
+            direccion = obtener_dato_validado(
+                validar_direccion,
+                "Dirección: ",
+                "Dirección inválida",
+                "5-100 caracteres"
+            )
+            
+            # Validar teléfono
+            telefono = obtener_dato_validado(
+                validar_telefono,
+                "Teléfono: ",
+                "Teléfono inválido",
+                "9 dígitos (ej: 912345678)"
+            )
             
             if clientedto.agregarCliente(run, nombre, apellido, direccion, telefono):
+                logger.info("Cliente agregado exitosamente: %s %s (%s)", nombre, apellido, run)
                 print("✅ Cliente agregado correctamente")
             else:
+                logger.error("Error al agregar cliente: %s", run)
                 print("❌ Error al agregar cliente")
                 
         elif opcion == '2':
+            logger.info("Buscando cliente")
             print("\n--- BUSCAR CLIENTE ---")
-            run = input("RUN del cliente: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del cliente: ",
+                "RUN inválido"
+            )
             cliente = clientedto.buscarCliente(run)
             if cliente:
+                logger.debug("Cliente encontrado: %s", run)
                 print(f"✅ Cliente encontrado:")
                 print(f"   RUN: {cliente.getRun()}")
                 print(f"   Nombre: {cliente.getNombre()} {cliente.getApellido()}")
                 print(f"   Dirección: {cliente.getDireccion()}")
                 print(f"   Teléfono: {cliente.getTelefono()}")
             else:
+                logger.debug("Cliente no encontrado: %s", run)
                 print("❌ Cliente no encontrado")
                 
         elif opcion == '3':
+            logger.info("Actualizando cliente")
             print("\n--- ACTUALIZAR CLIENTE ---")
-            run = input("RUN del cliente a actualizar: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del cliente a actualizar: ",
+                "RUN inválido"
+            )
             cliente_existente = clientedto.buscarCliente(run)
             if cliente_existente:
+                logger.debug("Cliente encontrado para actualización: %s", run)
                 print(f"Cliente actual: {cliente_existente.getNombre()} {cliente_existente.getApellido()}")
-                nombre = input(f"Nuevo nombre [{cliente_existente.getNombre()}]: ") or cliente_existente.getNombre()
-                apellido = input(f"Nuevo apellido [{cliente_existente.getApellido()}]: ") or cliente_existente.getApellido()
-                direccion = input(f"Nueva dirección [{cliente_existente.getDireccion()}]: ") or cliente_existente.getDireccion()
-                telefono = input(f"Nuevo teléfono [{cliente_existente.getTelefono()}]: ") or cliente_existente.getTelefono()
+                
+                # Validar nombre
+                nombre = obtener_dato_validado(
+                    validar_nombre,
+                    f"Nuevo nombre [{cliente_existente.getNombre()}]: ",
+                    "Nombre inválido"
+                ) or cliente_existente.getNombre()
+                
+                # Validar apellido
+                apellido = obtener_dato_validado(
+                    validar_nombre,
+                    f"Nuevo apellido [{cliente_existente.getApellido()}]: ",
+                    "Apellido inválido"
+                ) or cliente_existente.getApellido()
+                
+                # Validar dirección
+                direccion = obtener_dato_validado(
+                    validar_direccion,
+                    f"Nueva dirección [{cliente_existente.getDireccion()}]: ",
+                    "Dirección inválida"
+                ) or cliente_existente.getDireccion()
+                
+                # Validar teléfono
+                telefono = obtener_dato_validado(
+                    validar_telefono,
+                    f"Nuevo teléfono [{cliente_existente.getTelefono()}]: ",
+                    "Teléfono inválido"
+                ) or cliente_existente.getTelefono()
                 
                 if clientedto.actualizarCliente(run, nombre, apellido, direccion, telefono):
+                    logger.info("Cliente actualizado exitosamente: %s", run)
                     print("✅ Cliente actualizado correctamente")
                 else:
+                    logger.error("Error al actualizar cliente: %s", run)
                     print("❌ Error al actualizar cliente")
             else:
+                logger.debug("Cliente no encontrado para actualización: %s", run)
                 print("❌ Cliente no encontrado")
                 
         elif opcion == '4':
+            logger.info("Eliminando cliente")
             print("\n--- ELIMINAR CLIENTE ---")
-            run = input("RUN del cliente a eliminar: ")
+            run = obtener_dato_validado(
+                validar_run,
+                "RUN del cliente a eliminar: ",
+                "RUN inválido"
+            )
             
-            # Primero verificar que existe
             cliente = clientedto.buscarCliente(run)
             if cliente:
+                logger.debug("Cliente encontrado para eliminación: %s", run)
                 print(f"🔍 Cliente encontrado: {cliente.getNombre()} {cliente.getApellido()}")
                 confirmacion = input(f"¿Está seguro de eliminar a {cliente.getNombre()} {cliente.getApellido()}? (s/N): ")
                 if confirmacion.lower() == 's':
                     if clientedto.eliminarCliente(run):
+                        logger.info("Cliente eliminado exitosamente: %s", run)
                         print("✅ Cliente eliminado correctamente")
                     else:
+                        logger.error("Error al eliminar cliente: %s", run)
                         print("❌ Error al eliminar cliente - Puede que tenga arriendos asociados")
                 else:
+                    logger.debug("Eliminación de cliente cancelada: %s", run)
                     print("❌ Eliminación cancelada")
             else:
+                logger.debug("Cliente no encontrado para eliminación: %s", run)
                 print("❌ Cliente no encontrado")
                 
         elif opcion == '5':
+            logger.info("Listando todos los clientes")
             print("\n--- LISTA DE CLIENTES ---")
             clientes = clientedto.listarClientes()
             if clientes:
+                logger.debug("Listados %d clientes", len(clientes))
                 for i, cliente in enumerate(clientes, 1):
                     print(f"{i}. {cliente.getNombre()} {cliente.getApellido()} - RUN: {cliente.getRun()} - Tel: {cliente.getTelefono()}")
             else:
+                logger.debug("No hay clientes registrados")
                 print("📝 No hay clientes registrados")
                 
         elif opcion == '6':
+            logger.info("Saliendo de gestión de clientes")
             break
         else:
+            logger.warning("Opción inválida en gestión de clientes: %s", opcion)
             print("❌ Opción no válida")
 
 def gestion_vehiculos():
     """Gestión completa de vehículos"""
+    logger.info("Iniciando gestión de vehículos")
     vehiculodto = VehiculoDTO()
     while True:
         print("""
@@ -252,29 +473,64 @@ def gestion_vehiculos():
         opcion = input("Seleccione una opción: ")
         
         if opcion == '1':
+            logger.info("Agregando nuevo vehículo")
             print("\n--- AGREGAR VEHÍCULO ---")
-            patente = input("Patente: ").upper()
+            
+            # Validar patente
+            patente = obtener_dato_validado(
+                validar_patente,
+                "Patente: ",
+                "Patente inválida",
+                "ABCD12 o ABC123"
+            ).upper()
+            
             marca = input("Marca: ")
             modelo = input("Modelo: ")
-            try:
-                año = int(input("Año: "))
-                precio_diario = float(input("Precio diario: "))
-            except ValueError:
-                print("❌ Error: Año y precio deben ser números válidos")
-                continue
+            
+            # Validar año
+            año = obtener_dato_validado(
+                validar_año,
+                "Año: ",
+                "Año inválido",
+                f"1900-{datetime.now().year + 1}"
+            )
+            año = int(año)
+            
+            # Validar precio
+            precio_diario = obtener_dato_validado(
+                validar_precio,
+                "Precio diario: ",
+                "Precio inválido",
+                "Número mayor a 0"
+            )
+            precio_diario = float(precio_diario)
                 
-            estado = input("Estado (disponible/mantencion) [disponible]: ").lower() or "disponible"
+            # Validar estado
+            estado = obtener_dato_validado(
+                validar_estado_vehiculo,
+                "Estado (disponible/mantencion) [disponible]: ",
+                "Estado inválido",
+                "disponible o mantencion"
+            ).lower() or "disponible"
             
             if vehiculodto.agregarVehiculo(patente, marca, modelo, año, precio_diario, estado):
+                logger.info("Vehículo agregado exitosamente: %s %s (%s)", marca, modelo, patente)
                 print("✅ Vehículo agregado correctamente")
             else:
+                logger.error("Error al agregar vehículo: %s", patente)
                 print("❌ Error al agregar vehículo")
                 
         elif opcion == '2':
+            logger.info("Buscando vehículo")
             print("\n--- BUSCAR VEHÍCULO ---")
-            patente = input("Patente del vehículo: ").upper()
+            patente = obtener_dato_validado(
+                validar_patente,
+                "Patente del vehículo: ",
+                "Patente inválida"
+            ).upper()
             vehiculo = vehiculodto.buscarVehiculo(patente)
             if vehiculo:
+                logger.debug("Vehículo encontrado: %s", patente)
                 print(f"✅ Vehículo encontrado:")
                 print(f"   Patente: {vehiculo.getPatente()}")
                 print(f"   Marca: {vehiculo.getMarca()}")
@@ -283,74 +539,124 @@ def gestion_vehiculos():
                 print(f"   Precio diario: ${vehiculo.getPrecioDiario():,.0f}")
                 print(f"   Estado: {vehiculo.getEstado()}")
             else:
+                logger.debug("Vehículo no encontrado: %s", patente)
                 print("❌ Vehículo no encontrado")
                 
         elif opcion == '3':
+            logger.info("Actualizando vehículo")
             print("\n--- ACTUALIZAR VEHÍCULO ---")
-            patente = input("Patente del vehículo a actualizar: ").upper()
+            patente = obtener_dato_validado(
+                validar_patente,
+                "Patente del vehículo a actualizar: ",
+                "Patente inválida"
+            ).upper()
             vehiculo_existente = vehiculodto.buscarVehiculo(patente)
             if vehiculo_existente:
+                logger.debug("Vehículo encontrado para actualización: %s", patente)
                 print(f"Vehículo actual: {vehiculo_existente.getMarca()} {vehiculo_existente.getModelo()} - {vehiculo_existente.getPatente()}")
+                
                 marca = input(f"Nueva marca [{vehiculo_existente.getMarca()}]: ") or vehiculo_existente.getMarca()
                 modelo = input(f"Nuevo modelo [{vehiculo_existente.getModelo()}]: ") or vehiculo_existente.getModelo()
-                try:
-                    año = input(f"Nuevo año [{vehiculo_existente.getAño()}]: ")
-                    año = int(año) if año else vehiculo_existente.getAño()
-                    precio_diario = input(f"Nuevo precio diario [{vehiculo_existente.getPrecioDiario():,.0f}]: ")
-                    precio_diario = float(precio_diario) if precio_diario else vehiculo_existente.getPrecioDiario()
-                except ValueError:
-                    print("❌ Error: Año y precio deben ser números válidos")
-                    continue
+                
+                # Validar año
+                año_input = input(f"Nuevo año [{vehiculo_existente.getAño()}]: ")
+                if año_input:
+                    año = obtener_dato_validado(
+                        lambda x: validar_año(x),
+                        "",
+                        "Año inválido"
+                    )
+                    año = int(año)
+                else:
+                    año = vehiculo_existente.getAño()
+                
+                # Validar precio
+                precio_input = input(f"Nuevo precio diario [{vehiculo_existente.getPrecioDiario():,.0f}]: ")
+                if precio_input:
+                    precio_diario = obtener_dato_validado(
+                        validar_precio,
+                        "",
+                        "Precio inválido"
+                    )
+                    precio_diario = float(precio_diario)
+                else:
+                    precio_diario = vehiculo_existente.getPrecioDiario()
                     
-                estado = input(f"Nuevo estado [{vehiculo_existente.getEstado()}]: ") or vehiculo_existente.getEstado()
+                # Validar estado
+                estado = obtener_dato_validado(
+                    validar_estado_vehiculo,
+                    f"Nuevo estado [{vehiculo_existente.getEstado()}]: ",
+                    "Estado inválido"
+                ) or vehiculo_existente.getEstado()
                 
                 if vehiculodto.actualizarVehiculo(patente, marca, modelo, año, precio_diario, estado):
+                    logger.info("Vehículo actualizado exitosamente: %s", patente)
                     print("✅ Vehículo actualizado correctamente")
                 else:
+                    logger.error("Error al actualizar vehículo: %s", patente)
                     print("❌ Error al actualizar vehículo")
             else:
+                logger.debug("Vehículo no encontrado para actualización: %s", patente)
                 print("❌ Vehículo no encontrado")
                 
         elif opcion == '4':
+            logger.info("Eliminando vehículo")
             print("\n--- ELIMINAR VEHÍCULO ---")
-            patente = input("Patente del vehículo a eliminar: ").upper()
+            patente = obtener_dato_validado(
+                validar_patente,
+                "Patente del vehículo a eliminar: ",
+                "Patente inválida"
+            ).upper()
             vehiculo = vehiculodto.buscarVehiculo(patente)
             if vehiculo:
+                logger.debug("Vehículo encontrado para eliminación: %s", patente)
                 confirmacion = input(f"¿Está seguro de eliminar el vehículo {vehiculo.getMarca()} {vehiculo.getModelo()} ({vehiculo.getPatente()})? (s/n): ")
                 if confirmacion.lower() == 's':
                     if vehiculodto.eliminarVehiculo(patente):
+                        logger.info("Vehículo eliminado exitosamente: %s", patente)
                         print("✅ Vehículo eliminado correctamente")
                     else:
+                        logger.error("Error al eliminar vehículo: %s", patente)
                         print("❌ Error al eliminar vehículo")
             else:
+                logger.debug("Vehículo no encontrado para eliminación: %s", patente)
                 print("❌ Vehículo no encontrado")
                 
         elif opcion == '5':
+            logger.info("Listando todos los vehículos")
             print("\n--- LISTA DE VEHÍCULOS ---")
             vehiculos = vehiculodto.listarVehiculos()
             if vehiculos:
+                logger.debug("Listados %d vehículos", len(vehiculos))
                 for i, vehiculo in enumerate(vehiculos, 1):
                     estado_icon = "🟢" if vehiculo.getEstado() == "disponible" else "🟡" if vehiculo.getEstado() == "mantencion" else "🔴"
                     print(f"{i}. {vehiculo.getMarca()} {vehiculo.getModelo()} - {vehiculo.getPatente()} - Año: {vehiculo.getAño()} - Precio: ${vehiculo.getPrecioDiario():,.0f} - {estado_icon} {vehiculo.getEstado()}")
             else:
+                logger.debug("No hay vehículos registrados")
                 print("📝 No hay vehículos registrados")
                 
         elif opcion == '6':
+            logger.info("Listando vehículos disponibles")
             print("\n--- VEHÍCULOS DISPONIBLES ---")
             vehiculos = vehiculodto.listarVehiculosDisponibles()
             if vehiculos:
+                logger.debug("Listados %d vehículos disponibles", len(vehiculos))
                 for i, vehiculo in enumerate(vehiculos, 1):
                     print(f"{i}. {vehiculo.getMarca()} {vehiculo.getModelo()} - {vehiculo.getPatente()} - Año: {vehiculo.getAño()} - Precio: ${vehiculo.getPrecioDiario():,.0f}")
             else:
+                logger.debug("No hay vehículos disponibles")
                 print("📝 No hay vehículos disponibles")
                 
         elif opcion == '7':
+            logger.info("Saliendo de gestión de vehículos")
             break
         else:
+            logger.warning("Opción inválida en gestión de vehículos: %s", opcion)
             print("❌ Opción no válida")
 
 def gestion_arriendos(empleado_actual):
     """Gestión de arriendos"""
+    logger.info("Iniciando gestión de arriendos por: %s", empleado_actual.getRun())
     arriendodto = ArriendoDTO()
     clientedto = ClienteDTO()
     vehiculodto = VehiculoDTO()
@@ -368,12 +674,14 @@ def gestion_arriendos(empleado_actual):
         opcion = input("Seleccione una opción: ")
         
         if opcion == '1':
+            logger.info("Agregando nuevo arriendo")
             print("\n--- AGREGAR ARRIENDO ---")
             
             # Listar clientes
             print("\n--- CLIENTES DISPONIBLES ---")
             clientes = clientedto.listarClientes()
             if not clientes:
+                logger.warning("No hay clientes registrados para crear arriendo")
                 print("❌ No hay clientes registrados. Debe registrar clientes primero.")
                 continue
             for cliente in clientes:
@@ -382,6 +690,7 @@ def gestion_arriendos(empleado_actual):
             try:
                 id_cliente = int(input("\nID del cliente: "))
             except ValueError:
+                logger.warning("ID de cliente inválido")
                 print("❌ ID debe ser un número")
                 continue
             
@@ -389,6 +698,7 @@ def gestion_arriendos(empleado_actual):
             print("\n--- VEHÍCULOS DISPONIBLES ---")
             vehiculos = vehiculodto.listarVehiculosDisponibles()
             if not vehiculos:
+                logger.warning("No hay vehículos disponibles para arriendo")
                 print("❌ No hay vehículos disponibles")
                 continue
             for vehiculo in vehiculos:
@@ -396,8 +706,22 @@ def gestion_arriendos(empleado_actual):
             
             try:
                 id_vehiculo = int(input("\nID del vehículo: "))
-                fecha_inicio = input("Fecha de inicio (YYYY-MM-DD): ")
-                fecha_fin = input("Fecha de fin (YYYY-MM-DD): ")
+                
+                # Validar fecha de inicio
+                fecha_inicio = obtener_dato_validado(
+                    validar_fecha,
+                    "Fecha de inicio (YYYY-MM-DD): ",
+                    "Fecha inválida",
+                    "YYYY-MM-DD"
+                )
+                
+                # Validar fecha de fin
+                fecha_fin = obtener_dato_validado(
+                    validar_fecha,
+                    "Fecha de fin (YYYY-MM-DD): ",
+                    "Fecha inválida",
+                    "YYYY-MM-DD"
+                )
                 
                 # Calcular días y costo
                 fecha_ini = datetime.strptime(fecha_inicio, '%Y-%m-%d')
@@ -405,11 +729,13 @@ def gestion_arriendos(empleado_actual):
                 dias = (fecha_f - fecha_ini).days
                 
                 if dias <= 0:
+                    logger.warning("Fechas inválidas para arriendo: inicio %s, fin %s", fecha_inicio, fecha_fin)
                     print("❌ La fecha fin debe ser posterior a la fecha inicio")
                     continue
                 
                 vehiculo = vehiculodto.buscarVehiculoPorId(id_vehiculo)
                 if not vehiculo:
+                    logger.warning("Vehículo no encontrado para arriendo: ID %s", id_vehiculo)
                     print("❌ Vehículo no encontrado")
                     continue
                     
@@ -428,21 +754,27 @@ def gestion_arriendos(empleado_actual):
                         vehiculodto.actualizarVehiculo(vehiculo.getPatente(), vehiculo.getMarca(), 
                                                       vehiculo.getModelo(), vehiculo.getAño(), 
                                                       vehiculo.getPrecioDiario(), "arrendado")
+                        logger.info("Arriendo agregado exitosamente: vehículo %s, cliente %s", id_vehiculo, id_cliente)
                         print("✅ Arriendo agregado correctamente")
                     else:
+                        logger.error("Error al agregar arriendo: vehículo %s, cliente %s", id_vehiculo, id_cliente)
                         print("❌ Error al agregar arriendo")
                         
             except ValueError as e:
+                logger.error("Error de valor en arriendo: %s", str(e))
                 print(f"❌ Error en los datos ingresados: {e}")
             except Exception as e:
+                logger.error("Error inesperado en arriendo: %s", str(e))
                 print(f"❌ Error: {e}")
                 
         elif opcion == '2':
+            logger.info("Buscando arriendo")
             print("\n--- BUSCAR ARRIENDO ---")
             try:
                 id_arriendo = int(input("ID del arriendo: "))
                 arriendo = arriendodto.buscarArriendo(id_arriendo)
                 if arriendo:
+                    logger.debug("Arriendo encontrado: %s", id_arriendo)
                     print(f"✅ Arriendo encontrado:")
                     print(f"   ID: {arriendo.getIdArriendo()}")
                     print(f"   ID Vehículo: {arriendo.getIdVehiculo()}")
@@ -452,11 +784,14 @@ def gestion_arriendos(empleado_actual):
                     print(f"   Costo total: ${arriendo.getCostoTotal():,.0f}")
                     print(f"   Estado: {arriendo.getEstado()}")
                 else:
+                    logger.debug("Arriendo no encontrado: %s", id_arriendo)
                     print("❌ Arriendo no encontrado")
             except ValueError:
+                logger.warning("ID de arriendo inválido")
                 print("❌ ID debe ser un número")
                 
         elif opcion == '3':
+            logger.info("Cancelando arriendo")
             print("\n--- CANCELAR ARRIENDO ---")
             try:
                 id_arriendo = int(input("ID del arriendo a cancelar: "))
@@ -481,48 +816,68 @@ def gestion_arriendos(empleado_actual):
                                         vehiculodto.actualizarVehiculo(vehiculo.getPatente(), vehiculo.getMarca(), 
                                                                       vehiculo.getModelo(), vehiculo.getAño(), 
                                                                       vehiculo.getPrecioDiario(), "disponible")
+                                    logger.info("Arriendo cancelado exitosamente: %s", id_arriendo)
                                     print("✅ Arriendo cancelado correctamente")
                                 else:
+                                    logger.error("Error al cancelar arriendo: %s", id_arriendo)
                                     print("❌ Error al cancelar arriendo")
                         else:
+                            logger.warning("Intento de cancelación fuera de plazo: arriendo %s", id_arriendo)
                             print("❌ No se puede cancelar el arriendo. Debe cancelarse al menos 4 horas antes.")
                     else:
+                        logger.warning("Intento de cancelar arriendo en estado %s: %s", arriendo.getEstado(), id_arriendo)
                         print(f"❌ El arriendo ya está {arriendo.getEstado()}")
                 else:
+                    logger.debug("Arriendo no encontrado para cancelación: %s", id_arriendo)
                     print("❌ Arriendo no encontrado")
             except ValueError:
+                logger.warning("ID de arriendo inválido para cancelación")
                 print("❌ ID debe ser un número")
                 
         elif opcion == '4':
+            logger.info("Listando todos los arriendos")
             print("\n--- LISTA DE ARRIENDOS ---")
             arriendos = arriendodto.listarArriendos()
             if arriendos:
+                logger.debug("Listados %d arriendos", len(arriendos))
                 for arriendo in arriendos:
                     estado_icon = "🟢" if arriendo.getEstado() == "activo" else "🟡" if arriendo.getEstado() == "finalizado" else "🔴"
                     print(f"ID: {arriendo.getIdArriendo()} - {arriendo.info_vehiculo} - Cliente: {arriendo.info_cliente}")
                     print(f"   Fechas: {arriendo.getFechaInicio()} a {arriendo.getFechaFin()} - Costo: ${arriendo.getCostoTotal():,.0f} - {estado_icon} {arriendo.getEstado()}\n")
             else:
+                logger.debug("No hay arriendos registrados")
                 print("📝 No hay arriendos registrados")
                 
         elif opcion == '5':
+            logger.info("Listando arriendos por fecha")
             print("\n--- ARRIENDOS POR FECHA ---")
-            fecha = input("Ingrese fecha (YYYY-MM-DD): ")
+            fecha = obtener_dato_validado(
+                validar_fecha,
+                "Ingrese fecha (YYYY-MM-DD): ",
+                "Fecha inválida",
+                "YYYY-MM-DD"
+            )
             arriendos = arriendodto.listarArriendosPorFecha(fecha)
             if arriendos:
+                logger.debug("Listados %d arriendos para fecha %s", len(arriendos), fecha)
                 print(f"Arriendos para la fecha {fecha}:")
                 for arriendo in arriendos:
                     estado_icon = "🟢" if arriendo.getEstado() == "activo" else "🟡" if arriendo.getEstado() == "finalizado" else "🔴"
                     print(f"  {arriendo.info_vehiculo} - Cliente: {arriendo.info_cliente} - {estado_icon} {arriendo.getEstado()}")
             else:
+                logger.debug("No hay arriendos para fecha %s", fecha)
                 print(f"📝 No hay arriendos para la fecha {fecha}")
                 
         elif opcion == '6':
+            logger.info("Saliendo de gestión de arriendos")
             break
         else:
+            logger.warning("Opción inválida en gestión de arriendos: %s", opcion)
             print("❌ Opción no válida")
 
 def generar_informes():
     """Generación de informes"""
+    logger.info("Iniciando generación de informes")
     clientedto = ClienteDTO()
     vehiculodto = VehiculoDTO()
     userdto = UserDTO()
@@ -541,10 +896,12 @@ def generar_informes():
         opcion = input("Seleccione una opción: ")
         
         if opcion == '1':
+            logger.info("Generando informe de clientes")
             print("\n" + "="*50)
             print("           INFORME DE CLIENTES")
             print("="*50)
             clientes = clientedto.listarClientes()
+            logger.debug("Informe clientes - Total: %d", len(clientes))
             print(f"Total de clientes: {len(clientes)}")
             print("-" * 50)
             for cliente in clientes:
@@ -555,6 +912,7 @@ def generar_informes():
                 print("-" * 30)
                 
         elif opcion == '2':
+            logger.info("Generando informe de vehículos")
             print("\n" + "="*50)
             print("           INFORME DE VEHÍCULOS")
             print("="*50)
@@ -562,6 +920,9 @@ def generar_informes():
             disponibles = vehiculodto.listarVehiculosDisponibles()
             arrendados = [v for v in vehiculos if v.getEstado() == "arrendado"]
             mantencion = [v for v in vehiculos if v.getEstado() == "mantencion"]
+            
+            logger.debug("Informe vehículos - Total: %d, Disponibles: %d, Arrendados: %d, Mantención: %d", 
+                        len(vehiculos), len(disponibles), len(arrendados), len(mantencion))
             
             print(f"Total de vehículos: {len(vehiculos)}")
             print(f"Disponibles: {len(disponibles)}")
@@ -574,12 +935,16 @@ def generar_informes():
                 print(f"{estado_icon} {vehiculo.getPatente()} - {vehiculo.getMarca()} {vehiculo.getModelo()} - Año: {vehiculo.getAño()} - ${vehiculo.getPrecioDiario():,.0f}/día")
                 
         elif opcion == '3':
+            logger.info("Generando informe de empleados")
             print("\n" + "="*50)
             print("           INFORME DE EMPLEADOS")
             print("="*50)
             empleados = userdto.listarUsuarios()
             gerentes = [e for e in empleados if e.getCargo() == 'gerente']
             empleados_normales = [e for e in empleados if e.getCargo() == 'empleado']
+            
+            logger.debug("Informe empleados - Total: %d, Gerentes: %d, Empleados: %d", 
+                        len(empleados), len(gerentes), len(empleados_normales))
             
             print(f"Total de empleados: {len(empleados)}")
             print(f"Gerentes: {len(gerentes)}")
@@ -591,6 +956,7 @@ def generar_informes():
                 print(f"{cargo_icon} {empleado.getNombre()} {empleado.getApellido()} - RUN: {empleado.getRun()} - {empleado.getCargo()}")
                 
         elif opcion == '4':
+            logger.info("Generando informe de arriendos")
             print("\n" + "="*50)
             print("           INFORME DE ARRIENDOS")
             print("="*50)
@@ -598,6 +964,9 @@ def generar_informes():
             activos = [a for a in arriendos if a.getEstado() == "activo"]
             finalizados = [a for a in arriendos if a.getEstado() == "finalizado"]
             cancelados = [a for a in arriendos if a.getEstado() == "cancelado"]
+            
+            logger.debug("Informe arriendos - Total: %d, Activos: %d, Finalizados: %d, Cancelados: %d", 
+                        len(arriendos), len(activos), len(finalizados), len(cancelados))
             
             print(f"Total de arriendos: {len(arriendos)}")
             print(f"Activos: {len(activos)}")
@@ -607,6 +976,7 @@ def generar_informes():
             
             if arriendos:
                 ingresos_totales = sum(a.getCostoTotal() for a in arriendos if a.getEstado() != "cancelado")
+                logger.debug("Ingresos totales calculados: $%s", ingresos_totales)
                 print(f"Ingresos totales: ${ingresos_totales:,.0f}")
                 print("-" * 30)
                 
@@ -616,6 +986,7 @@ def generar_informes():
                 print(f"   Cliente: {arriendo.info_cliente} - ${arriendo.getCostoTotal():,.0f} - {arriendo.getEstado()}")
                 
         elif opcion == '5':
+            logger.info("Generando informe general del sistema")
             print("\n" + "="*60)
             print("              INFORME GENERAL DEL SISTEMA")
             print("="*60)
@@ -626,6 +997,9 @@ def generar_informes():
             empleados = userdto.listarUsuarios()
             arriendos = arriendodto.listarArriendos()
             
+            logger.info("Informe general - Clientes: %d, Vehículos: %d, Empleados: %d, Arriendos: %d", 
+                       len(clientes), len(vehiculos), len(empleados), len(arriendos))
+            
             print(f"📊 ESTADÍSTICAS GENERALES:")
             print(f"   👥 Clientes registrados: {len(clientes)}")
             print(f"   🚗 Vehículos en flota: {len(vehiculos)}")
@@ -635,6 +1009,7 @@ def generar_informes():
             if arriendos:
                 ingresos_totales = sum(a.getCostoTotal() for a in arriendos if a.getEstado() != "cancelado")
                 arriendos_activos = len([a for a in arriendos if a.getEstado() == "activo"])
+                logger.debug("Informe general - Ingresos: $%s, Arriendos activos: %d", ingresos_totales, arriendos_activos)
                 print(f"   💰 Ingresos totales: ${ingresos_totales:,.0f}")
                 print(f"   📅 Arriendos activos: {arriendos_activos}")
                 
@@ -642,6 +1017,8 @@ def generar_informes():
             disponibles = len([v for v in vehiculos if v.getEstado() == "disponible"])
             arrendados = len([v for v in vehiculos if v.getEstado() == "arrendado"])
             mantencion = len([v for v in vehiculos if v.getEstado() == "mantencion"])
+            logger.debug("Estado vehículos - Disponibles: %d, Arrendados: %d, Mantención: %d", 
+                        disponibles, arrendados, mantencion)
             print(f"   🟢 Disponibles: {disponibles}")
             print(f"   🔴 Arrendados: {arrendados}")
             print(f"   🟡 En mantención: {mantencion}")
@@ -650,12 +1027,16 @@ def generar_informes():
             activos = len([a for a in arriendos if a.getEstado() == "activo"])
             finalizados = len([a for a in arriendos if a.getEstado() == "finalizado"])
             cancelados = len([a for a in arriendos if a.getEstado() == "cancelado"])
+            logger.debug("Estado arriendos - Activos: %d, Finalizados: %d, Cancelados: %d", 
+                        activos, finalizados, cancelados)
             print(f"   🟢 Activos: {activos}")
             print(f"   🟡 Finalizados: {finalizados}")
             print(f"   🔴 Cancelados: {cancelados}")
             print("="*60)
                 
         elif opcion == '6':
+            logger.info("Saliendo de generación de informes")
             break
         else:
+            logger.warning("Opción inválida en generación de informes: %s", opcion)
             print("❌ Opción no válida")
