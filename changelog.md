@@ -1,224 +1,127 @@
-# 📋 CHANGELOG - Sistema de Gestión de Arriendos
-**Fecha:** 22 de Octubre, 2025  
-**Versión:** 1.2.0  
-**Resumen:** Implementación masiva de mejoras de código, seguridad y documentación
+# Changelog
+
+## [Unreleased]
+
+### Added - 2025-11-19
+
+#### 🛡️ Seguridad Avanzada
+- **Nueva función `validar_entrada_sql()`** en `validador_formatos.py`
+  - Detección de palabras clave SQL: SELECT, INSERT, UPDATE, DELETE, DROP, UNION, EXEC
+  - Prevención de comentarios SQL: --, #, /* */
+  - Rechazo de patrones maliciosos: OR 1=1, AND 1=1, WAITFOR, DELAY
+  - Respeto de límites de longitud (máximo 255 caracteres)
+  - Logging automático de intentos sospechosos
+
+- **Nueva función `validar_password_segura()`** en `validador_formatos.py`
+  - Requisito de mínimo 8 caracteres
+  - Al menos una mayúscula, una minúscula, un dígito y un carácter especial
+  - Retorna tupla (bool, mensaje) con detalles del error
+  - Integrada en creación y actualización de empleados
+
+- **Nueva función `sanitizar_texto()`** en `validador_formatos.py`
+  - Remueve caracteres potencialmente peligrosos: ; \ ' " - # *
+  - Útil para preparar datos antes de registrarlos
+
+- **Nueva función `cifrar_datos_sensibles()`** en `validador_formatos.py`
+  - Wrapper para cifrado de datos sensibles
+  - Usa `utils.encoder.Encoder` si está disponible
+
+#### 📋 Integración de Seguridad en Controlador
+- `controlador/validations.py` - Integración de validaciones:
+  - Línea ~131: Reemplazo de `validar_password()` con `validar_password_segura()` en sección "Agregar Empleado"
+  - Línea ~146: Agregado `validar_entrada_sql()` en todos los campos antes de `agregarUsuario()`
+  - Línea ~208: Reemplazo de `validar_password()` con `validar_password_segura()` en sección "Actualizar Empleado"
+  - Línea ~341: Agregado `validar_entrada_sql()` en todos los campos antes de `agregarCliente()`
+
+#### ✅ Suite Completa de Pruebas
+- **Nuevo archivo `test_security_functions.py`**
+  - 18 pruebas unitarias cobriendo todas las funciones de seguridad
+  - Clase TestValidarEntradaSQL (7 pruebas): validación, palabras clave, comentarios, patrones, longitud, entrada vacía
+  - Clase TestValidarPasswordSegura (6 pruebas): contraseña válida, longitud, mayúscula, minúscula, dígito, carácter especial
+  - Clase TestSanitizarTexto (5 pruebas): caracteres peligrosos, caracteres seguros, backslash, hash, entrada vacía
+  - Clase TestIntegration (1 prueba): flujo completo de detección de entrada maliciosa
+  - **Resultado**: 18/18 pruebas pasadas ✅
+
+#### 📝 Cambios de Presentación
+- Reemplazados emojis con mensajes de texto para mejor compatibilidad cross-platform
+- Formato: `[OK]`, `[ERROR]`, `[TEST]` en lugar de ✅, ❌, 🧪
+- Mejora de compatibilidad en consolas Windows y sistemas legacy
+
+#### 📖 Documentación
+- **Nuevo archivo `SECURITY_INTEGRATION_SUMMARY.md`**
+  - Resumen completo de cambios de seguridad
+  - Ejemplos de uso y casos de prueba
+  - Impacto en la aplicación y próximos pasos
+
+### Changed - 2025-11-19
+
+#### Refactorización de Validaciones
+- Todos los mensajes de validación actualizados a formato de texto plano
+- Mejorada compatibilidad en diferentes sistemas operativos
+- Logging consistente de intentos de seguridad
+
+### Comportamiento de Seguridad
+
+#### Entrada Sospechosa
+- Log: `WARNING:root:Entrada sospechosa para SQL detectada: [texto]`
+- UI: `[ERROR] Datos sospechosos detectados. Operación cancelada.`
+- Acción: Cancela operación sin insertar datos
+
+#### Contraseña Débil
+- Log: `DEBUG:root:Contraseña inválida: [razón específica]`
+- UI: `[ERROR] [Requisito fallido]` (p.ej., "Debe contener al menos 8 caracteres")
+- Acción: Solicita nueva contraseña
+
+#### Entrada Válida
+- Log: `INFO:root:Empleado/Cliente agregado exitosamente...`
+- UI: `[OK] Empleado/Cliente agregado correctamente`
+- Acción: Procede normalmente
+
+### Puntos de Aplicación Actual
+
+1. **Agregar Empleado**
+   - Validación de contraseña fuerte (obligatoria)
+   - Validación SQL en: run, nombre, apellido, cargo
+   - Logging de intentos fallidos
+
+2. **Actualizar Empleado**
+   - Validación de contraseña fuerte (si cambia)
+
+3. **Agregar Cliente**
+   - Validación SQL en: run, nombre, apellido, dirección
+   - Logging de intentos fallidos
+
+### Próximos Pasos Recomendados
+
+#### Corto Plazo
+- Extender `validar_entrada_sql()` a:
+  - Entrada de vehículos (patente, marca, modelo)
+  - Entrada de arriendos (fecha, observaciones)
+  - Búsquedas y filtros
+
+#### Mediano Plazo
+- Implementar rate limiting para fallos de contraseña
+- Agregar auditoría detallada de intentos de seguridad
+- Crear panel de administración para visualizar logs
+
+#### Largo Plazo
+- Implementar 2FA (autenticación de dos factores)
+- Integrar OWASP Security Guidelines
+- Realizar auditoría de seguridad profesional
 
 ---
 
-## 🚀 **NUEVAS CARACTERÍSTICAS**
+## [Previous Versions]
 
-### 1. **Sistema de Logging Profesional**
-- ✅ **Nuevo módulo**: `utils/logger.py` con configuración centralizada
-- ✅ **Logs rotativos**: Archivos separados para logs generales y de errores
-- ✅ **Niveles de log**: DEBUG, INFO, WARNING, ERROR
-- ✅ **Eliminación de debug prints** que exponían información sensible
+### 2025-11-19 (Previous Release)
+- Soporte ES3 UF en arriendos
+- Optimización de base de datos (JOIN queries)
+- Refactorización de DAO/DTO
+- Mejora de rendimiento (eliminación de N+1 queries)
 
-### 2. **Type Hints y Documentación Completa**
-- ✅ **Documentación completa** para 16 archivos del sistema
-- ✅ **Type hints** en todos los métodos y funciones
-- ✅ **Docstrings estandarizados** con formato Google
-- ✅ **Mejora en autocompletado** y detección temprana de errores
-
----
-
-## 🔧 **MEJORAS TÉCNICAS**
-
-### **Seguridad**
-- 🛡️ **Eliminación de información sensible** en logs
-- 🛡️ **Validación mejorada** en DTOs y DAOs
-- 🛡️ **Manejo seguro de contraseñas** con bcrypt
-- 🛡️ **Logging de auditoría** para operaciones críticas
-
-### **Base de Datos**
-- 🗄️ **Script SQL completamente renovado** (`create.sql`)
-- 🗄️ **Nuevas tablas**: `danio_vehiculo`, `auditoria`
-- 🗄️ **Vistas útiles**: Reportes predefinidos
-- 🗄️ **Triggers de auditoría**: Tracking automático de cambios
-- 🗄️ **Índices optimizados**: Mejor performance en consultas
-- 🗄️ **Restricciones de datos**: Validaciones a nivel de BD
-
-### **Arquitectura**
-- 🏗️ **Documentación completa** de todas las capas (Modelo, DAO, DTO)
-- 🏗️ **Separación clara** de responsabilidades
-- 🏗️ **Manejo consistente** de errores y excepciones
-
----
-
-## 📁 **ARCHIVOS MODIFICADOS/CREADOS**
-
-### **Nuevos Archivos**
-```
-✅ utils/logger.py - Sistema centralizado de logging
-```
-
-### **Archivos Completamente Refactorizados**
-```
-🔧 dto_user.py          - Type hints + documentación + logging
-🔧 dao_user.py          - Type hints + documentación + logging  
-🔧 encoder.py           - Type hints + documentación + logging
-🔧 user.py              - Type hints + documentación
-🔧 persona.py           - Type hints + documentación
-🔧 conn.py              - Type hints + documentación + logging
-🔧 main.py              - Type hints + documentación + logging
-🔧 cliente.py           - Type hints + documentación
-🔧 vehiculo.py          - Type hints + documentación
-🔧 arriendo.py          - Type hints + documentación
-🔧 dto_cliente.py       - Type hints + documentación
-🔧 dto_vehiculo.py      - Type hints + documentación
-🔧 dto_arriendo.py      - Type hints + documentación
-🔧 dao_cliente.py       - Type hints + documentación + logging
-🔧 dao_vehiculo.py      - Type hints + documentación + logging
-🔧 dao_arriendo.py      - Type hints + documentación + logging
-🔧 validations.py       - Sistema de logging integrado
-```
-
-### **Scripts de Base de Datos**
-```
-🗄️ create.sql - Completamente renovado con estructura mejorada
-```
-
----
-
-## 🎯 **MEJORAS ESPECÍFICAS POR CAPA**
-
-### **Capa de Modelo**
-- ✅ Type hints en todas las clases
-- ✅ Documentación de atributos y métodos
-- ✅ Validaciones de datos mejoradas
-- ✅ Métodos `__str__` consistentes
-
-### **Capa DAO (Data Access Object)**
-- ✅ Manejo profesional de excepciones
-- ✅ Logging de operaciones de BD
-- ✅ Type hints en consultas SQL
-- ✅ Documentación de parámetros y retornos
-
-### **Capa DTO (Data Transfer Object)**
-- ✅ Validación de datos de entrada
-- ✅ Transformación segura de datos
-- ✅ Logging de operaciones críticas
-- ✅ Documentación completa de flujos
-
-### **Utilidades**
-- ✅ Sistema de logging centralizado
-- ✅ Encriptación segura con bcrypt
-- ✅ Configuración flexible de logs
-- ✅ Manejo de errores robusto
-
----
-
-## 🐛 **CORRECCIONES DE ERRORES**
-
-### **Corregidos**
-- ✅ **Problema de desempaquetado** en `dto_user.py`
-- ✅ **Manejo de conexiones** en DAOs
-- ✅ **Flujo de login** en `main.py`
-- ✅ **Validación de tipos** en métodos críticos
-
-### **Mejorados**
-- ✅ **Manejo de valores nulos** en todos los métodos
-- ✅ **Validación de formatos** (RUN, patentes, fechas)
-- ✅ **Consistencia en retornos** de funciones
-- ✅ **Mensajes de error** más descriptivos
-
----
-
-## 📊 **MÉTRICAS DE CALIDAD**
-
-### **Documentación**
-- **📝 16 archivos** documentados completamente
-- **📚 +500 líneas** de documentación agregada
-- **🎯 100% de métodos** con docstrings
-- **📋 Ejemplos de uso** en métodos complejos
-
-### **Type Hints**
-- **🔍 100% de archivos** con type hints
-- **📐 +200 parámetros** tipados
-- **🔄 +150 retornos** especificados
-- **🏷️ Tipos complejos** (Optional, List, Tuple) implementados
-
-### **Seguridad**
-- **🛡️ 0 prints sensibles** en código de producción
-- **🔐 Logging seguro** sin exposición de datos
-- **📊 Auditoría** de operaciones críticas
-- **🚫 Validación** de entrada en todas las capas
-
----
-
-## 🔄 **CAMBIO DE COMPORTAMIENTO**
-
-### **Antes**
-```python
-# ❌ Viejo enfoque - Debug inseguro
-print(f"🔍 Hash encontrado: {password_hash[:20]}...")
-```
-
-### **Después**
-```python
-# ✅ Nuevo enfoque - Logging seguro
-logger.debug("Hash de contraseña recuperado para usuario: %s", username)
-```
-
-### **Antes**
-```python
-# ❌ Sin type hints - Propenso a errores
-def validarLogin(self, username, clave):
-```
-
-### **Después**
-```python
-# ✅ Con type hints - Más robusto
-def validarLogin(self, username: str, clave: str) -> Optional[User]:
-```
-
----
-
-## 📈 **BENEFICIOS LOGRADOS**
-
-### **Para Desarrolladores**
-- 🎯 **Mejor autocompletado** en IDEs
-- 🔍 **Detección temprana** de errores
-- 📚 **Documentación accesible** 
-- 🛠️ **Mantenimiento más fácil**
-
-### **Para el Sistema**
-- 🚀 **Performance mejorada** con índices de BD
-- 🛡️ **Seguridad reforzada** en múltiples capas
-- 📊 **Monitoreo efectivo** con logging profesional
-- 🔄 **Escalabilidad** preparada para crecimiento
-
-### **Para Operaciones**
-- 📋 **Debugging más rápido** con logs estructurados
-- 🎯 **Auditoría completa** de operaciones
-- 📈 **Reportes automáticos** con vistas de BD
-- 🔧 **Mantenimiento predictivo** con métricas
-
----
-
-## 🎉 **RESUMEN DEL DÍA**
-
-### **Logros Principales**
-1. **✅ Sistema de logging profesional** implementado
-2. **✅ Documentación completa** en 16 archivos
-3. **✅ Type hints** en toda la base de código
-4. **✅ Base de datos mejorada** con estructura robusta
-5. **✅ Seguridad reforzada** en múltiples niveles
-
-### **Próximos Pasos**
-- 🔄 **Completar validations.py** con type hints y documentación
-- 🧪 **Realizar pruebas integrales** del sistema
-- 📋 **Generar documentación de usuario**
-- 🚀 **Preparar despliegue** de versión 1.2.0
-
----
-
-## 👥 **IMPACTO EN CRITERIOS DE EVALUACIÓN**
-
-### **Cumplimiento Mejorado**
-- ✅ **2.1.1** - Diagrama de clases implícito mejor documentado
-- ✅ **2.1.2** - POO con type hints y documentación completa
-- ✅ **2.1.3** - Librerías mejor documentadas y seguras
-- ✅ **2.1.4** - CRUD con logging y auditoría
-- ✅ **2.1.5** - Manejo de excepciones profesionalizado
-
-**✨ El sistema ha alcanzado un nivel de calidad profesional en código y documentación.**
+### Initial Release
+- Arquitectura MVC con Python
+- Autenticación de usuarios con bcrypt
+- Gestión de empleados, clientes, vehículos y arriendos
+- Interfaz CLI
+- Base de datos MySQL
