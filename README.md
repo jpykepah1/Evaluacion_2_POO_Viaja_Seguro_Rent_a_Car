@@ -18,6 +18,15 @@
 
 Sistema completo de gestión para una empresa de arriendo de vehículos, desarrollado en **Python** bajo una arquitectura **MVC**, utilizando **XAMPP** y **MySQL** como entorno de base de datos, y **PyMySQL** como conector backend seguro.
 
+## 🆕 Actualizaciones recientes (2025-11-19)
+
+- Agregado soporte ES3/UF en arriendos: se almacenan `valor_uf_fecha` y `fecha_uf_consulta` para auditoría.
+- El cálculo de costo ahora usa la UF consultada: `costo_clp = (dias * precio_diario_en_uf) * valor_uf`.
+- Se mejoró el rendimiento de listados: el DAO ahora devuelve arriendos con campos de vehículo/cliente en una sola consulta (evita N+1 queries).
+- Se añadieron validaciones de seguridad en `MVC/validador_formatos.py` (detección básica de inyección SQL, sanitización, validación de contraseñas y wrapper de cifrado).
+
+> Nota: `vehiculo.precio_diario` en los datos de ejemplo está expresado en UF; revise su migración si tenía valores en CLP.
+
 > **Contexto Académico:** Proyecto de la asignatura *“Programación Orientada a Objeto Seguro (TI3021)”*.  
 > Implementa principios de **POO**, **seguridad de contraseñas** y **gestión modular** de usuarios, clientes, vehículos y arriendos.
 
