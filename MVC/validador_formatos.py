@@ -114,10 +114,18 @@ def validar_año(año_str):
         return False, "❌ Año debe ser un número"
 
 def validar_password(password):
-    """Valida contraseña"""
-    if len(password) >= 6:
-        return True, "✅ Contraseña válida"
-    return False, "❌ Contraseña muy corta (mínimo 6 caracteres)"
+    """Valida contraseña (mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 dígito y 1 carácter especial)"""
+    if len(password) < 8:
+        return False, "❌ Contraseña muy corta (mínimo 8 caracteres)"
+    if not re.search(r"[A-Z]", password):
+        return False, "❌ Contraseña debe tener al menos una letra mayúscula"
+    if not re.search(r"[a-z]", password):
+        return False, "❌ Contraseña debe tener al menos una letra minúscula"
+    if not re.search(r"\d", password):
+        return False, "❌ Contraseña debe tener al menos un dígito"
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False, "❌ Contraseña debe tener al menos un carácter especial"
+    return True, "✅ Contraseña válida"
 
 def validar_cargo(cargo):
     """Valida cargo de empleado"""
