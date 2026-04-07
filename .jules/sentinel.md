@@ -1,0 +1,4 @@
+## 2025-04-06 - [Critical Security Enhancement] Replaced hardcoded default credentials with environment variables for database configuration
+**Vulnerability:** The database connection class `Conex` used hardcoded string values ("root", "") as defaults for connection credentials. Although these were default parameters and not hardcoded internal logic, they posed a significant risk if the code was deployed without explicit initialization overrides.
+**Learning:** Hardcoding default parameter values for sensitive connections exposes secrets if the object is instantiated default arguments, a common case.
+**Prevention:** Always use `os.environ.get()` to pull sensitive parameters from the environment instead of relying on default keyword argument string values. Provide sensible, non-sensitive fallbacks where applicable, but require secrets to be injected dynamically.
