@@ -2,3 +2,7 @@
 **Vulnerability:** The database connection class `Conex` used hardcoded string values ("root", "") as defaults for connection credentials. Although these were default parameters and not hardcoded internal logic, they posed a significant risk if the code was deployed without explicit initialization overrides.
 **Learning:** Hardcoding default parameter values for sensitive connections exposes secrets if the object is instantiated default arguments, a common case.
 **Prevention:** Always use `os.environ.get()` to pull sensitive parameters from the environment instead of relying on default keyword argument string values. Provide sensible, non-sensitive fallbacks where applicable, but require secrets to be injected dynamically.
+## 2025-02-19 - [HIGH] Fake Brute-force Lockout Fix in Login Endpoint
+**Vulnerability:** A logic error existed in `MVC/main.py` where the login attempt counter was incorrectly reset every time the user went back to the main menu. This meant the 3-attempt lockout could be trivially bypassed, allowing infinite attempts.
+**Learning:** In interactive CLI applications with menu loops, temporary local variables (like `intentos = 1` inside an `if` block) fail to provide true session-level state tracking.
+**Prevention:** Always implement rate limiting or lockout state at the application or session level (e.g., using a persistent dictionary tracking failures by username outside the immediate menu loop) or via the database.
