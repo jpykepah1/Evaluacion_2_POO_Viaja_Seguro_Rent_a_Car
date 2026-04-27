@@ -1,6 +1,7 @@
 from controlador.validations import inicial, validarLogin
 import getpass
 import logging
+import time
 from utils.logger import SistemaLogging
 from typing import Optional
 
@@ -64,10 +65,12 @@ def main() -> None:
                         logger.warning("Intento de login fallido para: %s (intento %d/3)", 
                                       username, intentos)
                         print("❌ Usuario o contraseña incorrecta")
+                        time.sleep(2)
                         intentos += 1
                 except Exception as e:
                     logger.error("Error durante login: %s", str(e))
                     print("❌ Error, intentar nuevamente")
+                    time.sleep(2)
                     intentos += 1
            
             if intentos > 3:
