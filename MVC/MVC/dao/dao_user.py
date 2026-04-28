@@ -59,7 +59,7 @@ class daoUser:
                 return None
                 
         except Exception as e:
-            logger.error("Error en validarLogin para usuario %s: %s", user.getRun(), str(e))
+            logger.error("Error en validarLogin para usuario %s: %s", user.getRun(), type(e).__name__)
             return None
         finally:
             if self.cursor:
@@ -92,7 +92,7 @@ class daoUser:
             logger.debug("Usuario insertado en BD: %s", user.getRun())
             return True
         except Exception as e:
-            logger.error("Error al agregar usuario %s en BD: %s", user.getRun(), str(e))
+            logger.error("Error al agregar usuario %s en BD: %s", user.getRun(), type(e).__name__)
             return False
         finally:
             if self.cursor:
@@ -122,7 +122,7 @@ class daoUser:
             logger.debug("Usuario actualizado en BD: %s", user.getRun())
             return True
         except Exception as e:
-            logger.error("Error al actualizar usuario %s en BD: %s", user.getRun(), str(e))
+            logger.error("Error al actualizar usuario %s en BD: %s", user.getRun(), type(e).__name__)
             return False
         finally:
             if self.cursor:
@@ -146,7 +146,7 @@ class daoUser:
             logger.debug("Búsqueda de usuario en BD: %s - %s", user.getRun(), "encontrado" if resultado else "no encontrado")
             return resultado
         except Exception as e:
-            logger.error("Error al buscar usuario %s en BD: %s", user.getRun(), str(e))
+            logger.error("Error al buscar usuario %s en BD: %s", user.getRun(), type(e).__name__)
             return None
         finally:
             if self.cursor:
@@ -173,7 +173,7 @@ class daoUser:
             logger.debug("Usuario eliminado de BD: %s", user.getRun())
             return True
         except Exception as e:
-            logger.error("Error al eliminar usuario %s de BD: %s", user.getRun(), str(e))
+            logger.error("Error al eliminar usuario %s de BD: %s", user.getRun(), type(e).__name__)
             return False
         finally:
             if self.cursor:
@@ -208,7 +208,7 @@ class daoUser:
             logger.debug("Listados %d usuarios de BD", len(usuarios))
             return usuarios
         except Exception as e:
-            logger.error("Error al listar usuarios de BD: %s", str(e))
+            logger.error("Error al listar usuarios de BD: %s", type(e).__name__)
             return []
         finally:
             if self.cursor:

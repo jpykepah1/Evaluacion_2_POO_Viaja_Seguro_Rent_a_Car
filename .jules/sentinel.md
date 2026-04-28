@@ -6,3 +6,7 @@
 **Vulnerability:** A logic error existed in `MVC/main.py` where the login attempt counter was incorrectly reset every time the user went back to the main menu. This meant the 3-attempt lockout could be trivially bypassed, allowing infinite attempts.
 **Learning:** In interactive CLI applications with menu loops, temporary local variables (like `intentos = 1` inside an `if` block) fail to provide true session-level state tracking.
 **Prevention:** Always implement rate limiting or lockout state at the application or session level (e.g., using a persistent dictionary tracking failures by username outside the immediate menu loop) or via the database.
+## 2025-04-28 - [MEDIUM] Fix Information Leakage in User DAO Exception Handling
+**Vulnerability:** Raw exception messages from `pymysql` were being logged using `str(e)` in all error handling blocks of `dao_user.py`. These messages often contain detailed database syntax, table structure, and state information, creating an information leakage vulnerability if logs are accessed.
+**Learning:** Even internal logging mechanisms can become attack vectors (e.g., via log injection or if logs are exposed to unprivileged users). Raw DB exception messages contain too much schema context.
+**Prevention:** Always catch and log generic, sanitized error messages (e.g., "Error interno de base de datos") in place of raw exception output for database and other sensitive backend operations.
