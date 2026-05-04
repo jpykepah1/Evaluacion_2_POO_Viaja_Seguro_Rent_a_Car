@@ -6,3 +6,7 @@
 **Vulnerability:** A logic error existed in `MVC/main.py` where the login attempt counter was incorrectly reset every time the user went back to the main menu. This meant the 3-attempt lockout could be trivially bypassed, allowing infinite attempts.
 **Learning:** In interactive CLI applications with menu loops, temporary local variables (like `intentos = 1` inside an `if` block) fail to provide true session-level state tracking.
 **Prevention:** Always implement rate limiting or lockout state at the application or session level (e.g., using a persistent dictionary tracking failures by username outside the immediate menu loop) or via the database.
+## 2025-05-04 - [HIGH] Fake Brute-force Lockout Fix in Login Endpoint
+**Vulnerability:** A logic error existed in `MVC/MVC/main.py` where the login attempt counter was scoped locally and incorrectly reset every time the user went back to the main menu. This meant the 3-attempt lockout could be trivially bypassed by restarting the login flow, allowing infinite attempts.
+**Learning:** In interactive CLI applications with menu loops, temporary local variables (like `intentos = 1` inside an `if` block) fail to provide true session-level state tracking.
+**Prevention:** Always implement rate limiting or lockout state at the application or session level (e.g., using a persistent dictionary tracking failures by username outside the immediate menu loop) or via the database.
