@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def menuAccesoUsuarios() -> None:
     """
     Muestra el menú de acceso principal del sistema.
-    
+
     Este menú permite a los usuarios iniciar sesión, solicitar creación
     de cuentas o salir del sistema.
     """
@@ -28,59 +28,62 @@ def menuAccesoUsuarios() -> None:
 def main() -> None:
     """
     Función principal que inicia la aplicación.
-    
+
     Controla el flujo principal del sistema, mostrando el menú
     de acceso y gestionando las opciones seleccionadas por el usuario.
-    
+
     El sistema permite hasta 3 intentos fallidos de login antes de
     bloquear el acceso temporalmente.
     """
     logger.info("Iniciando sistema de gestión de arriendos")
-    
-    while True:  
+
+    intentos_fallidos = {}
+
+    while True:
         print("=== SISTEMA DE GESTIÓN DE ARRIENDOS ===")
         print("=== Viaja Seguro Rent a Car ===")
         menuAccesoUsuarios()
         opcion = input("Ingrese opción: ")
 
         if opcion == '1':
-            intentos = 1
-            username: Optional[str] = None
-            
-            while intentos <= 3:
-                try:
-                    logger.debug("Intento de login #%d", intentos)
-                    username = input("Ingrese RUN de empleado: ")
-                    password = getpass.getpass("Ingrese contraseña: ")
-                   
-                    empleado = validarLogin(username, password)
-                    if empleado is not None:
-                        logger.info("Login exitoso para: %s %s", 
-                                   empleado.getNombre(), empleado.getApellido())
-                        print(f"\n✅ Bienvenido(a) Sr(a). : {empleado.getNombre()} {empleado.getApellido()}")
-                        inicial(empleado)
-                        break  
-                    else:
-                        logger.warning("Intento de login fallido para: %s (intento %d/3)", 
-                                      username, intentos)
-                        print("❌ Usuario o contraseña incorrecta")
-                        intentos += 1
-                except Exception as e:
-                    logger.error("Error durante login: %s", str(e))
-                    print("❌ Error, intentar nuevamente")
-                    intentos += 1
-           
-            if intentos > 3:
-                logger.warning("Cuenta bloqueada por múltiples intentos fallidos para: %s", 
-                              username)
+            username = input("Ingrese RUN de empleado: ")
+
+            if intentos_fallidos.get(username, 0) >= 3:
+                logger.warning("Cuenta bloqueada por múltiples intentos fallidos para: %s", username)
                 print("🚫 Cuenta bloqueada por demasiados intentos fallidos")
-                input("Presione Enter para continuar...")  
-               
+                input("Presione Enter para continuar...")
+                continue
+
+            try:
+                logger.debug("Intento de login para %s", username)
+                password = getpass.getpass("Ingrese contraseña: ")
+
+                empleado = validarLogin(username, password)
+                if empleado is not None:
+                    intentos_fallidos[username] = 0
+                    logger.info("Login exitoso para: %s %s",
+                               empleado.getNombre(), empleado.getApellido())
+                    print(f"\n✅ Bienvenido(a) Sr(a). : {empleado.getNombre()} {empleado.getApellido()}")
+                    inicial(empleado)
+                else:
+                    intentos_fallidos[username] = intentos_fallidos.get(username, 0) + 1
+                    logger.warning("Intento de login fallido para: %s (intento %d/3)",
+                                  username, intentos_fallidos[username])
+                    print("❌ Usuario o contraseña incorrecta")
+                    if intentos_fallidos[username] >= 3:
+                        logger.warning("Cuenta bloqueada por múltiples intentos fallidos para: %s", username)
+                        print("🚫 Cuenta bloqueada por demasiados intentos fallidos")
+                        input("Presione Enter para continuar...")
+            except Exception as e:
+                logger.error("Error durante login: %s", str(e))
+                print("❌ Error, intentar nuevamente")
+                intentos_fallidos[username] = intentos_fallidos.get(username, 0) + 1
+
         elif opcion == '2':
             logger.info("Solicitada creación de nueva cuenta")
             print("Para crear una nueva cuenta, contacte al administrador del sistema.")
             input("Presione Enter para continuar...")
-                   
+
         elif opcion == '3':
             logger.info("Sistema cerrado por el usuario")
             print("¡Hasta pronto!")
