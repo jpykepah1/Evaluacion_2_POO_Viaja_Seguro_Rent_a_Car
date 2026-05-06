@@ -497,8 +497,19 @@ def gestion_vehiculos():
                 "ABCD12 o ABC123"
             ).upper()
             
-            marca = input("Marca: ")
-            modelo = input("Modelo: ")
+            while True:
+                marca = input("Marca: ")
+                marca = sanitizar_texto(marca)
+                if marca:
+                    break
+                print("❌ Marca inválida (no puede estar vacía)")
+
+            while True:
+                modelo = input("Modelo: ")
+                modelo = sanitizar_texto(modelo)
+                if modelo:
+                    break
+                print("❌ Modelo inválido (no puede estar vacío)")
             
             # Validar año
             año = obtener_dato_validado(
@@ -568,8 +579,17 @@ def gestion_vehiculos():
                 logger.debug("Vehículo encontrado para actualización: %s", patente)
                 print(f"Vehículo actual: {vehiculo_existente.getMarca()} {vehiculo_existente.getModelo()} - {vehiculo_existente.getPatente()}")
                 
-                marca = input(f"Nueva marca [{vehiculo_existente.getMarca()}]: ") or vehiculo_existente.getMarca()
-                modelo = input(f"Nuevo modelo [{vehiculo_existente.getModelo()}]: ") or vehiculo_existente.getModelo()
+                marca = input(f"Nueva marca [{vehiculo_existente.getMarca()}]: ")
+                if marca:
+                    marca = sanitizar_texto(marca)
+                else:
+                    marca = vehiculo_existente.getMarca()
+
+                modelo = input(f"Nuevo modelo [{vehiculo_existente.getModelo()}]: ")
+                if modelo:
+                    modelo = sanitizar_texto(modelo)
+                else:
+                    modelo = vehiculo_existente.getModelo()
                 
                 # Validar año
                 año_input = input(f"Nuevo año [{vehiculo_existente.getAño()}]: ")
